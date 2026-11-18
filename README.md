@@ -36,18 +36,19 @@ Gremlin never decides on its own whether something works: **every pass and every
 evidence pack behind it.
 
 ```
-   support email ──┐
-   GitHub issue ───┴──► Capture ──► plain-English flow ──► Kane CLI runs it ──► fails? ──► confirmed bug
-                     (strips personal data)    ▲                                                 │
-   Breaker: a hostile user's attack ───────────┘                                                 │
-                                                                                                 │
-             ┌──────────── your coding agent ◄── Kane's evidence pack ◄──────────────────────────┘
-             │   (Claude Code, Codex, Cursor, Gemini, any CLI)
-             ▼
-        code change ──► Kane CLI re-runs the flow + related flows ──► pass ──► fixed, locked as a regression
-                                       │                                      test that every "done" and PR replays
-                                       └──► fail ──► evidence goes back to the agent (up to N times)
-                                                     ──► then escalates to a human
+support email ──┐
+GitHub issue ───┴─► Capture ─► plain-English flow ─► Kane CLI runs it ─► fails? ─► bug
+                 (strips personal data)    ▲                                         │
+Breaker: a hostile user's attack ──────────┘                                         │
+                                                                                     │
+       ┌──────── your coding agent ◄── Kane's evidence pack ◄────────────────────────┘
+       │   (Claude Code, Codex, Cursor, Gemini, any CLI)
+       ▼
+  code change ─► Kane re-runs it + related flows ─► pass ─► fixed, locked as a
+                        │                                   regression test that every
+                        │                                   "done" and PR replays
+                        └─► fail ─► evidence back to the agent (up to N tries),
+                                    then to a human
 ```
 
 ## One bug, end to end
