@@ -1,0 +1,34 @@
+{
+  "id": "BUG-001",
+  "title": "Checkout order submission remains on checkout with error message",
+  "origin": "breaker",
+  "status": "candidate",
+  "severity": "critical",
+  "confidence": 0.99,
+  "flowId": "adversarial/a-shopper-with-a-non-latin-name-can-place-an-order",
+  "attack": "input.non-latin-name",
+  "tags": [
+    "checkout",
+    "input"
+  ],
+  "failingStep": "Check the expected outcome",
+  "reason": "Checkpoint assertion failed: \"an order confirmation page says \"Thank you, Łucja Nowak!\"\"",
+  "verdict": {
+    "confirmed": true,
+    "family": "application_issue",
+    "category": "functional_defect",
+    "severity": "major",
+    "confidence": 0.9,
+    "title": "Checkout order submission remains on checkout with error message",
+    "oneLiner": "The order was not confirmed: checkout remained open and displayed an error instead of the requested thank-you message and order number.",
+    "rootCause": "After the customer details were entered, the checkout did not complete the order. It stayed on the checkout page and showed an error message, so no confirmation page or order number was available.",
+    "suggestion": "Investigate the order-submission path and its server response. When the entered checkout details are accepted, send the shopper to a confirmation page with the thank-you message and order number; if submission truly fails, provide a specific, actionable error."
+  },
+  "runs": [
+    "RUN-20261118-163240-baf87a"
+  ],
+  "attempts": [],
+  "createdAt": "2026-11-18T11:07:20.055Z",
+  "updatedAt": "2026-11-18T11:07:20.055Z",
+  "credits": 80.18
+}

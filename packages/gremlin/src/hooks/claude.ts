@@ -2,7 +2,8 @@ import { spawnSync } from 'node:child_process';
 import { isAbsolute, relative, resolve } from 'node:path';
 import { tryLoadProject, type Project } from '../core/config.ts';
 import { guardBrief, runGuard } from '../core/guard.ts';
-import { protectedMatcher } from '../core/guardrails.ts';
+import picomatch from 'picomatch';
+import { ALWAYS_PROTECTED, protectedMatcher } from '../core/guardrails.ts';
 import { RULES } from '../core/integrations.ts';
 import { kaneStatus } from '../core/kane.ts';
 import { isGitRepo } from '../core/snapshot.ts';
@@ -47,13 +48,20 @@ function baseline(root: string): string | undefined {
   return git(root, ['stash', 'create']) || git(root, ['rev-parse', 'HEAD']) || undefined;
 }
 
+function untrackedFiles(root: string): Record<string, string> {
+  const files: Record<string, string> = {};
+  for (const f of git(root, ['ls-files', '--others', '--exclude-standard']).split('\n')) if (f) files[f] = git(root, ['hash-object', f]);
+  return files;
+}
+
 /** Files that differ from the session's baseline, and a fingerprint of their current content. */
-function sessionChanges(root: string, base?: string): { files: string[]; fingerprint: string } {
+function sessionChanges(root: string, base?: string, untrackedAtStart?: Record<string, string>): { files: string[]; fingerprint: string } {
   if (!isGitRepo(root)) return { files: [], fingerprint: '' };
   const files = new Set<string>();
   const ref = base ?? 'HEAD';
   for (const f of git(root, ['diff', '--name-only', '--relative', ref]).split('\n')) if (f) files.add(f);
-  for (const f of git(root, ['ls-files', '--others', '--exclude-standard']).split('\n')) if (f) files.add(f);
+  // the baseline stash only covers tracked files; an untracked file counts if the session created or changed it
+  for (const [f, hash] of Object.entries(untrackedFiles(root))) if (untrackedAtStart?.[f] !== hash) files.add(f);
   const list = [...files].filter((f) => !f.startsWith('.gremlin/') && !f.startsWith('.claude/')).sort();
   const hashes = list.map((f) => `${f}:${git(root, ['hash-object', f])}`).join('\n');
   return { files: list, fingerprint: sha256(hashes) };
@@ -70,7 +78,10 @@ export async function sessionStart(): Promise<void> {
   const project = tryLoadProject(input.cwd ?? process.cwd());
   if (!project) return;
   const { state, s } = session(project, input.session_id ?? 'default');
-  s.baseline ??= baseline(project.root);
+  if (!s.baseline) {
+    s.baseline = baseline(project.root);
+    if (isGitRepo(project.root)) s.untracked = untrackedFiles(project.root);
+  }
   writeState(project.paths, state);
   out({
     hookSpecificOutput: {
@@ -100,8 +111,11 @@ export async function preToolUse(): Promise<void> {
     const rel = relative(project.root, abs);
     if (rel.startsWith('..')) return;
     if (protectedMatcher(project)(rel)) {
+      const isTest = picomatch(ALWAYS_PROTECTED, { dot: true })(rel);
       return deny(
-        `Gremlin: ${rel} is protected. Flows are the tests, and changing what is tested is never a fix. Fix the application instead; a human can change flows with \`gremlin flows\`.`,
+        isTest
+          ? `Gremlin: ${rel} is protected. Flows are the tests, and changing what is tested is never a fix. Fix the application instead; a human can change flows with \`gremlin flows\`.`
+          : `Gremlin: ${rel} is in this project's protected_paths, so agents may not change it. Fix the problem somewhere else, or ask a human to change it.`,
       );
     }
     return;
@@ -127,7 +141,7 @@ export async function stop(): Promise<void> {
 
   const sid = input.session_id ?? 'default';
   const { state, s } = session(project, sid);
-  const { files, fingerprint } = sessionChanges(project.root, s.baseline);
+  const { files, fingerprint } = sessionChanges(project.root, s.baseline, s.untracked);
   if (isGitRepo(project.root) && !files.length) return; // no code changed this session: nothing to prove
   if (fingerprint && fingerprint === s.lastGuardAt && s.lastResult === 'passed') return; // already proven, unchanged since
 

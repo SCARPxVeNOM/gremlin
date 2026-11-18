@@ -22,7 +22,9 @@ gremlin break --max 6
 - Claude Code reads `server.js` and proposes attacks, each citing the line that made it suspicious.
 - Kane runs each one in a real browser. Point at the live loop: steps, then Kane's triage.
 - Kane rules some failures *automation* problems. Gremlin doesn't file them, and hands the triage back to the agent to
-  rewrite the flow.
+  rewrite the flow. If the agent still thinks the product is wrong, it says so with a file:line, and the flow is
+  marked *Disputed* for a human.
+- Two attacks that trip the same defect become one bug with two reproductions, not two bugs.
 - Open **Bugs**: real bugs, each with Kane's screenshots, console and network evidence.
 
 ## 3. A complaint becomes a test (40s)
@@ -38,7 +40,8 @@ Open **Capture**, click *Use a sample complaint*, then *Reproduce with Kane*.
 Open the coupon bug, click **Fix with agent** (or `gremlin fix BUG-…`).
 
 - Show *What the agent was given*: Kane's evidence, the likely code, the rules (fix the product, never the test).
-- Claude Code edits `server.js`. Kane re-runs the flow and the related checkout flows.
+- Claude Code edits `server.js`. Gremlin restarts the shop so Kane sees the new code, then Kane re-runs the flow and the
+  related checkout flows.
 - The stepper turns green: **Proven by Kane**. The flow moves to `regression/`, locked forever.
 
 ## 5. The agent can't say "done" until Kane agrees (30s)

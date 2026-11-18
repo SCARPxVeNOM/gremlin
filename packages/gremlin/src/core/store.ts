@@ -63,6 +63,8 @@ export interface FixAttempt {
   agentSummary?: string;
   runId?: string;
   relatedRuns?: string[];
+  /** The app wouldn't start after the change; this is why. */
+  appError?: string;
   result: 'passed' | 'failed' | 'blocked' | 'agent-error' | 'pending';
   durationS?: number;
 }
@@ -87,6 +89,8 @@ export interface BugRecord {
   createdAt: string;
   updatedAt: string;
   fixedAt?: string;
+  /** Set when Guard caught a fixed bug coming back. */
+  regressedAt?: string;
   credits: number;
 }
 
@@ -287,6 +291,8 @@ export function tamperedFlows(paths: ProjectPaths, flows: Flow[]): Flow[] {
 export interface HookSession {
   attempts: number;
   baseline?: string;
+  /** Untracked files at session start, with their content hash: only new or changed ones count as the session's work. */
+  untracked?: Record<string, string>;
   startedAt: string;
   lastGuardAt?: string;
   lastResult?: string;

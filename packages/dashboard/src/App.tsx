@@ -10,18 +10,44 @@ import { LiveIndicator } from '@/components/live-indicator'
 import { Page } from '@/components/page'
 import { Skeleton } from '@/components/ui/skeleton'
 
-const Overview = lazy(() => import('@/pages/overview'))
-const Flows = lazy(() => import('@/pages/flows'))
-const FlowDetail = lazy(() => import('@/pages/flow-detail'))
-const Bugs = lazy(() => import('@/pages/bugs'))
-const BugDetail = lazy(() => import('@/pages/bug-detail'))
-const Runs = lazy(() => import('@/pages/runs'))
-const RunDetail = lazy(() => import('@/pages/run-detail'))
-const Capture = lazy(() => import('@/pages/capture'))
-const Breaker = lazy(() => import('@/pages/breaker'))
-const Report = lazy(() => import('@/pages/report'))
-const Settings = lazy(() => import('@/pages/settings'))
-const NotFound = lazy(() => import('@/pages/not-found'))
+const RELOADED = 'gremlin:reloaded-for-chunk'
+
+/** A page chunk from an older build is gone after an upgrade: reload once to pick up the new build. */
+function page(load: () => Promise<{ default: React.ComponentType<any> }>) {
+  return lazy(() =>
+    load().then(
+      (mod) => {
+        try {
+          sessionStorage.removeItem(RELOADED)
+        } catch {}
+        return mod
+      },
+      (err) => {
+        try {
+          if (!sessionStorage.getItem(RELOADED)) {
+            sessionStorage.setItem(RELOADED, '1')
+            location.reload()
+            return new Promise<never>(() => {})
+          }
+        } catch {}
+        throw err
+      },
+    ),
+  )
+}
+
+const Overview = page(() => import('@/pages/overview'))
+const Flows = page(() => import('@/pages/flows'))
+const FlowDetail = page(() => import('@/pages/flow-detail'))
+const Bugs = page(() => import('@/pages/bugs'))
+const BugDetail = page(() => import('@/pages/bug-detail'))
+const Runs = page(() => import('@/pages/runs'))
+const RunDetail = page(() => import('@/pages/run-detail'))
+const Capture = page(() => import('@/pages/capture'))
+const Breaker = page(() => import('@/pages/breaker'))
+const Report = page(() => import('@/pages/report'))
+const Settings = page(() => import('@/pages/settings'))
+const NotFound = page(() => import('@/pages/not-found'))
 
 function Loading() {
   return (

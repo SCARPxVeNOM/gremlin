@@ -1,6 +1,7 @@
 import { spawn, spawnSync } from 'node:child_process';
 import type { GremlinConfig } from './config.ts';
 import { round } from './util.ts';
+import { onInterrupt } from './interrupt.ts';
 
 /**
  * Gremlin does not ship a coding agent. It drives the one you already use, headless,
@@ -51,6 +52,7 @@ function exec(bin: string, args: string[], opts: ExecOptions): Promise<{ code: n
       env: { ...process.env, GREMLIN_AGENT_RUN: '1' },
       stdio: [opts.stdin !== undefined ? 'pipe' : 'ignore', 'pipe', 'pipe'],
     });
+    const release = onInterrupt(() => child.kill('SIGTERM'));
     let stdout = '';
     let stderr = '';
     let buf = '';
@@ -77,6 +79,7 @@ function exec(bin: string, args: string[], opts: ExecOptions): Promise<{ code: n
       resolve({ code: 127, stdout, stderr: stderr + err.message, durationS: round((Date.now() - started) / 1000) });
     });
     child.on('close', (code) => {
+      release();
       clearTimeout(timer);
       if (buf && opts.onLine) opts.onLine(buf);
       resolve({ code: code ?? 1, stdout, stderr, durationS: round((Date.now() - started) / 1000) });
@@ -147,7 +150,8 @@ const claudeCode: AgentConnector = {
                   const input = c.input ?? {};
                   const file = input.file_path ?? input.path ?? input.pattern ?? input.command ?? '';
                   const kind = /Edit|Write/.test(c.name) ? 'edit' : c.name === 'Bash' ? 'run' : 'read';
-                  onActivity?.({ kind, detail: `${c.name} ${String(file).replace(cwd + '/', '')}`.trim() });
+                  const shown = String(file).split(cwd + '/').join('').split(cwd).join('.');
+                  onActivity?.({ kind, detail: `${c.name} ${shown}`.trim() });
                 } else if (c.type === 'text' && c.text?.trim()) {
                   onActivity?.({ kind: 'text', detail: c.text.trim().slice(0, 300) });
                 }

@@ -146,6 +146,11 @@ The point of Gremlin is that **Kane's verdict always flows back to an agent**, a
   watched the same flow pass.
 - **Kane triage filters noise.** Failures Kane attributes to the automation, not the product, are held for review.
   A failure that passes on the automatic retry is marked flaky; three flakes in ten runs quarantines the flow.
+- **Kane tests the new code.** Before Kane verifies a fix, Gremlin restarts the app it started, so a server without hot
+  reload can't hand Kane the old code. If the change stops the app from starting, its stderr goes back to the agent as
+  that attempt's evidence.
+- **Disagreements go to a human.** When Kane blames a flow but the agent that wrote it argues, citing code, that the
+  product is at fault, nothing is filed: Kane's verdict stands, and the flow is marked *Disputed* for a human to settle.
 
 ### Guardrails
 
@@ -155,6 +160,10 @@ The point of Gremlin is that **Kane's verdict always flows back to an agent**, a
   test cards are fine).
 - Budgets per run, per day and per bug, tracked in a credit ledger.
 - Emails, phone numbers, card numbers and tokens are redacted from bug reports and Kane evidence before anything else sees them.
+- One bug, one record: a failure Kane puts in the same defect category as an open bug, described in mostly the same
+  words, is added to that bug as another reproduction instead of being filed twice.
+- Stopping Gremlin mid-run (Ctrl-C, a cancelled CI step) stops Kane, the agent and any app Gremlin started, closes the job
+  and puts a bug that was being fixed back where it was.
 
 ## Commands
 

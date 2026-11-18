@@ -107,6 +107,8 @@ export async function runGuard(project: Project, opts: GuardOptions = {}): Promi
         const { bug, regression } = recordGuardFailure(project, flow, run, job);
         result.bug = bug;
         result.regression = regression;
+      } else if (run.status === 'passed' && flow.type === 'regression') {
+        result.bug = recordRegressionPass(project, flow, run, job);
       }
       return result;
     });
@@ -131,6 +133,21 @@ export async function runGuard(project: Project, opts: GuardOptions = {}): Promi
   }
 }
 
+/**
+ * A regression flow was proven once, when its bug was fixed. If the bug came back and Kane now passes the same locked
+ * flow again, that is the same proof: the bug is fixed again.
+ */
+function recordRegressionPass(project: Project, flow: Flow, run: RunRecord, job: Job): BugRecord | undefined {
+  const bug = bugForFlow(project.paths, flow);
+  if (!bug || bug.status === 'fixed' || bug.status === 'rejected') return bug;
+  bug.status = 'fixed';
+  bug.fixedAt = nowIso();
+  bug.runs.push(run.id);
+  saveBug(project.paths, bug);
+  emit(project.paths, 'bug', `${bug.id} fixed again: Kane passed its regression flow`, { bugId: bug.id, status: 'fixed', runId: run.id }, job.id);
+  return bug;
+}
+
 /** A failing guarded flow either reopens the bug it was guarding (a regression) or opens a new one. */
 function recordGuardFailure(project: Project, flow: Flow, run: RunRecord, job: Job): { bug: BugRecord; regression: boolean } {
   const { paths } = project;
@@ -142,6 +159,7 @@ function recordGuardFailure(project: Project, flow: Flow, run: RunRecord, job: J
     existing.failingStep = run.kane?.failedStep?.heading;
     existing.reason = run.kane?.reason;
     existing.fixedAt = undefined;
+    if (regression) existing.regressedAt = nowIso();
     saveBug(paths, existing);
     emit(paths, 'bug', regression ? `Regression caught: ${existing.id} is back` : `${existing.id} still failing`, { bugId: existing.id, regression, runId: run.id }, job.id);
     return { bug: existing, regression };

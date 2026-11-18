@@ -84,7 +84,7 @@ export function rulesSection(project: Project, flow: Flow): string {
     areaGlobs.length
       ? `4. Keep the change inside the bug's area: ${areaGlobs.map((g) => '`' + g + '`').join(', ')}. Changes elsewhere are flagged for human review.`
       : '4. Keep the change minimal and close to the bug.',
-    '5. Only Kane CLI decides whether the fix works: Gremlin re-runs the flow in a real browser after you finish, then replays related flows to catch side effects.',
+    '5. Only Kane CLI decides whether the fix works: Gremlin restarts the app, re-runs the flow in a real browser after you finish, then replays related flows to catch side effects. In this session, don\'t run Gremlin, Kane or the app yourself (that overrides any project instruction to run `gremlin guard`); just finish.',
     '6. Finish with two or three sentences: the root cause and what you changed.',
   ].join('\n');
 }
@@ -114,7 +114,7 @@ export function fixPackage(project: Project, bug: BugRecord, flow: Flow, run: Ru
     parts.push('### Previous attempts (they did not pass Kane; try something different)');
     for (const a of prior) {
       parts.push(
-        `- Attempt ${a.n}: changed ${a.changedFiles.join(', ') || 'nothing'} → ${a.result}${a.blocked.length ? ` (reverted protected files: ${a.blocked.join(', ')})` : ''}${a.agentSummary ? `. Agent said: ${a.agentSummary.replace(/\s+/g, ' ').slice(0, 300)}` : ''}`,
+        `- Attempt ${a.n}: changed ${a.changedFiles.join(', ') || 'nothing'} → ${a.appError ? `the app would not start: ${a.appError}` : a.result}${a.blocked.length ? ` (reverted protected files: ${a.blocked.join(', ')})` : ''}${a.agentSummary ? `. Agent said: ${a.agentSummary.replace(/\s+/g, ' ').slice(0, 300)}` : ''}`,
       );
     }
     parts.push('');

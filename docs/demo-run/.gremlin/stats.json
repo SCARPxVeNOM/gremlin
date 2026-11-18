@@ -1,0 +1,223 @@
+{
+  "flows": {
+    "happy/buy-a-mug": {
+      "runs": 7,
+      "passes": 7,
+      "fails": 0,
+      "flakes": 0,
+      "errors": 0,
+      "history": [
+        "passed",
+        "passed",
+        "passed",
+        "passed",
+        "passed",
+        "passed",
+        "passed"
+      ],
+      "last": "passed",
+      "lastRunAt": "2026-11-18T12:10:31.219Z",
+      "lastRunId": "RUN-20261118-174012-b76323"
+    },
+    "happy/coupon-at-checkout": {
+      "runs": 6,
+      "passes": 6,
+      "fails": 0,
+      "flakes": 0,
+      "errors": 0,
+      "history": [
+        "passed",
+        "passed",
+        "passed",
+        "passed",
+        "passed",
+        "passed"
+      ],
+      "last": "passed",
+      "lastRunAt": "2026-11-18T12:04:47.022Z",
+      "lastRunId": "RUN-20261118-173430-7c8995"
+    },
+    "happy/search-the-shop": {
+      "runs": 5,
+      "passes": 5,
+      "fails": 0,
+      "flakes": 0,
+      "errors": 0,
+      "history": [
+        "passed",
+        "passed",
+        "passed",
+        "passed",
+        "passed"
+      ],
+      "last": "passed",
+      "lastRunAt": "2026-11-18T12:05:09.192Z",
+      "lastRunId": "RUN-20261118-173447-39be16"
+    },
+    "adversarial/a-shopper-with-a-non-latin-name-can-place-an-order": {
+      "runs": 1,
+      "passes": 0,
+      "fails": 1,
+      "flakes": 0,
+      "errors": 0,
+      "history": [
+        "failed"
+      ],
+      "last": "failed",
+      "lastRunAt": "2026-11-18T11:07:20.053Z",
+      "lastRunId": "RUN-20261118-163240-baf87a"
+    },
+    "adversarial/cart-rejects-a-negative-quantity": {
+      "runs": 2,
+      "passes": 1,
+      "fails": 1,
+      "flakes": 0,
+      "errors": 0,
+      "history": [
+        "failed",
+        "passed"
+      ],
+      "last": "passed",
+      "lastRunAt": "2026-11-18T12:09:13.453Z",
+      "lastRunId": "RUN-20261118-173732-de633e"
+    },
+    "adversarial/searching-for-a-phrase-with-a-percent-sign-shows-results": {
+      "runs": 1,
+      "passes": 0,
+      "fails": 1,
+      "flakes": 0,
+      "errors": 0,
+      "history": [
+        "failed"
+      ],
+      "last": "failed",
+      "lastRunAt": "2026-11-18T11:13:32.034Z",
+      "lastRunId": "RUN-20261118-164132-5f61a3"
+    },
+    "adversarial/the-cart-is-empty-after-placing-an-order": {
+      "runs": 2,
+      "passes": 0,
+      "fails": 2,
+      "flakes": 0,
+      "errors": 0,
+      "history": [
+        "failed",
+        "failed"
+      ],
+      "last": "failed",
+      "lastRunAt": "2026-11-18T11:23:00.812Z",
+      "lastRunId": "RUN-20261118-164909-f1cc36"
+    },
+    "adversarial/search-shows-typed-html-as-plain-text-not-markup": {
+      "runs": 1,
+      "passes": 0,
+      "fails": 1,
+      "flakes": 0,
+      "errors": 0,
+      "history": [
+        "failed"
+      ],
+      "last": "failed",
+      "lastRunAt": "2026-11-18T11:25:04.431Z",
+      "lastRunId": "RUN-20261118-165300-56e7c1"
+    },
+    "adversarial/cart-a-negative-quantity": {
+      "runs": 2,
+      "passes": 1,
+      "fails": 1,
+      "flakes": 0,
+      "errors": 0,
+      "history": [
+        "failed",
+        "passed"
+      ],
+      "last": "passed",
+      "lastRunAt": "2026-11-18T12:10:12.347Z",
+      "lastRunId": "RUN-20261118-173913-0b0623"
+    },
+    "adversarial/search-special-characters-like-100-and-markup": {
+      "runs": 1,
+      "passes": 0,
+      "fails": 1,
+      "flakes": 0,
+      "errors": 0,
+      "history": [
+        "failed"
+      ],
+      "last": "failed",
+      "lastRunAt": "2026-11-18T11:30:08.937Z",
+      "lastRunId": "RUN-20261118-165759-7f706d"
+    },
+    "adversarial/cart-pressing-back-and-forward-mid-flow": {
+      "runs": 7,
+      "passes": 6,
+      "fails": 1,
+      "flakes": 0,
+      "errors": 0,
+      "history": [
+        "failed",
+        "passed",
+        "passed",
+        "passed",
+        "passed",
+        "passed",
+        "passed"
+      ],
+      "last": "passed",
+      "lastRunAt": "2026-11-18T12:12:04.567Z",
+      "lastRunId": "RUN-20261118-174031-574df0"
+    },
+    "regression/a-lowercase-welcome-coupon-code-welcome10-is-accepted-and-ta": {
+      "runs": 6,
+      "passes": 3,
+      "fails": 3,
+      "flakes": 0,
+      "errors": 0,
+      "history": [
+        "failed",
+        "passed",
+        "failed",
+        "failed",
+        "passed",
+        "passed"
+      ],
+      "last": "passed",
+      "lastRunAt": "2026-11-18T12:07:13.894Z",
+      "lastRunId": "RUN-20261118-173641-fdb37e"
+    }
+  },
+  "attacks": {
+    "input.non-latin-name": {
+      "tried": 1,
+      "found": 1
+    },
+    "input.negative-quantity": {
+      "tried": 1,
+      "found": 1
+    },
+    "input.percent-in-search": {
+      "tried": 1,
+      "found": 1
+    },
+    "state.cart-after-order": {
+      "tried": 1,
+      "found": 0
+    },
+    "input.html-in-search": {
+      "tried": 1,
+      "found": 1
+    },
+    "input.negative": {
+      "tried": 1,
+      "found": 1
+    },
+    "input.special": {
+      "tried": 1,
+      "found": 1
+    },
+    "navigation.back-mid-flow": {
+      "tried": 1,
+      "found": 0
+    }
+  }
+}

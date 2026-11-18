@@ -1,0 +1,39 @@
+{
+  "flows": {
+    "happy/search-the-shop": {
+      "hash": "b354afb3bf2036a8",
+      "approvedAt": "2026-11-18T10:32:04.711Z",
+      "by": "first pass"
+    },
+    "happy/buy-a-mug": {
+      "hash": "245c9400c9533864",
+      "approvedAt": "2026-11-18T10:34:32.374Z",
+      "by": "first pass"
+    },
+    "happy/coupon-at-checkout": {
+      "hash": "e7c8b3c406e2f71d",
+      "approvedAt": "2026-11-18T10:36:22.144Z",
+      "by": "first pass"
+    },
+    "adversarial/cart-pressing-back-and-forward-mid-flow": {
+      "hash": "dfd074acbd62c8f8",
+      "approvedAt": "2026-11-18T11:36:15.015Z",
+      "by": "breaker"
+    },
+    "regression/a-lowercase-welcome-coupon-code-welcome10-is-accepted-and-ta": {
+      "hash": "59e33b170d9dd415",
+      "approvedAt": "2026-11-18T11:47:11.580Z",
+      "by": "fixer"
+    },
+    "regression/cart-rejects-a-negative-quantity": {
+      "hash": "68bcb7a6c445edf4",
+      "approvedAt": "2026-11-18T12:12:04.574Z",
+      "by": "fixer"
+    },
+    "regression/cart-a-negative-quantity": {
+      "hash": "9e898efb5ffeed1b",
+      "approvedAt": "2026-11-18T12:12:04.577Z",
+      "by": "fixer"
+    }
+  }
+}

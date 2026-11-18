@@ -1,5 +1,5 @@
 import { Link, useParams } from 'react-router-dom'
-import { Ban, Bot, ChevronDown, FileCode2, Microscope, Quote, RotateCw, ShieldAlert, ShieldCheck, Wrench } from 'lucide-react'
+import { Ban, Bot, ChevronDown, FileCode2, History, Microscope, Quote, RotateCw, ShieldAlert, ShieldCheck, Wrench } from 'lucide-react'
 import { toast } from 'sonner'
 import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -28,23 +28,29 @@ const ORIGIN: Record<string, string> = { breaker: 'Found by Breaker', capture: '
 
 /** The closed loop for one bug, as four stages: found, reproduced by Kane, fixed by the agent, proven by Kane. */
 function LoopStepper({ bug, runs }: { bug: Bug; runs: Run[] }) {
-  const reproduced = runs.some((r) => r.status === 'failed' && r.purpose !== 'fix')
+  const reproductions = runs.filter((r) => r.status === 'failed' && r.purpose !== 'fix' && r.purpose !== 'verify').length
+  const reproduced = reproductions > 0
   const tried = bug.attempts.length > 0
   const fixing = bug.status === 'fixing'
   const proven = bug.status === 'fixed'
   const escalated = bug.status === 'escalated'
+  const regressed = Boolean(bug.regressedAt) && !proven && !fixing
   const stages = [
     { label: ORIGIN[bug.origin], detail: timeAgo(bug.createdAt), state: 'done' },
-    { label: 'Reproduced by Kane', detail: reproduced ? 'failed first, as it should' : 'not yet', state: reproduced ? 'done' : 'todo' },
+    {
+      label: 'Reproduced by Kane',
+      detail: reproductions > 1 ? `failed first, reproduced ${reproductions} times` : reproduced ? 'failed first, as it should' : 'not yet',
+      state: reproduced ? 'done' : 'todo',
+    },
     {
       label: 'Agent fix',
       detail: tried ? `${bug.attempts.length} attempt${bug.attempts.length === 1 ? '' : 's'}` : 'not started',
       state: fixing ? 'active' : tried ? (escalated ? 'bad' : 'done') : 'todo',
     },
     {
-      label: proven ? 'Proven by Kane' : escalated ? 'Escalated to a human' : 'Kane re-run',
-      detail: proven ? timeAgo(bug.fixedAt) : escalated ? 'out of attempts' : 'pending',
-      state: proven ? 'done' : escalated ? 'bad' : 'todo',
+      label: proven ? 'Proven by Kane' : escalated ? 'Escalated to a human' : regressed ? 'Regressed' : 'Kane re-run',
+      detail: proven ? timeAgo(bug.fixedAt) : escalated ? 'out of attempts' : regressed ? `Guard caught it coming back ${timeAgo(bug.regressedAt)}` : 'pending',
+      state: proven ? 'done' : escalated || regressed ? 'bad' : 'todo',
     },
   ]
   return (
@@ -187,6 +193,12 @@ export default function BugDetail() {
         <div className="flex flex-wrap items-center gap-3 pt-1 text-sm">
           <span className="text-muted-foreground font-mono">{bug.id}</span>
           <StatusBadge status={bug.status} />
+          {bug.regressedAt && bug.status !== 'fixed' && (
+            <Badge variant="outline" className="gap-1 font-normal">
+              <History className="text-serious" />
+              Regressed
+            </Badge>
+          )}
           <SeverityBadge severity={bug.severity} />
           <span className="text-muted-foreground inline-flex items-center gap-1.5 text-xs">
             confidence <Confidence value={bug.confidence} />

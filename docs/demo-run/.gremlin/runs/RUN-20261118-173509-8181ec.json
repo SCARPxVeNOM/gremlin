@@ -1,0 +1,394 @@
+{
+  "id": "RUN-20261118-173509-8181ec",
+  "flowId": "adversarial/cart-pressing-back-and-forward-mid-flow",
+  "flowTitle": "Cart: pressing back and forward mid-flow",
+  "flowType": "adversarial",
+  "flowHash": "dfd074acbd62c8f8",
+  "purpose": "guard",
+  "job": "guard-25cdfd",
+  "target": "http://localhost:4000/product/ash-glaze-mug",
+  "startedAt": "2026-11-18T12:05:09.193Z",
+  "status": "passed",
+  "credits": 0,
+  "kane": {
+    "status": "passed",
+    "exitCode": 0,
+    "steps": [
+      {
+        "index": 1,
+        "heading": "Step 1: Click the Add to cart button for the Ash Glaze Mug",
+        "status": "passed",
+        "actions": [
+          "Navigate to http://localhost:4000/product/ash-glaze-mug",
+          "Clicking Add to cart for the Ash Glaze Mug"
+        ],
+        "replayed": true,
+        "durationS": 1.24
+      },
+      {
+        "index": 2,
+        "heading": "Step 2: Click View cart, then click Checkout",
+        "status": "passed",
+        "actions": [
+          "Clicking View cart",
+          "Clicking Checkout in the cart summary"
+        ],
+        "replayed": true,
+        "durationS": 1.41
+      },
+      {
+        "index": 3,
+        "heading": "Step 3: On the Checkout page, type Test Shopper in Full name and shoppe…",
+        "status": "passed",
+        "actions": [
+          "Waiting for the queued plan steps to run",
+          "Type \"Test Shopper\" into \"Full name\"",
+          "Type \"shopper@example.test\" into \"Email\""
+        ],
+        "replayed": true,
+        "durationS": 1.46
+      },
+      {
+        "index": 4,
+        "heading": "Step 4: Press the browser back button, then press the browser forward b…",
+        "status": "passed",
+        "actions": [
+          "Navigate back",
+          "Waiting for the browser back button returning to the previous history entry",
+          "Navigate forward",
+          "Waiting for the Checkout page to load"
+        ],
+        "replayed": true,
+        "durationS": 4.18
+      },
+      {
+        "index": 5,
+        "heading": "Step 5: If Full name or Email is now empty, type Test Shopper in Full n…",
+        "status": "passed",
+        "actions": [
+          "Checking whether the Full name field contains content",
+          "Checking whether the Email field contains content"
+        ],
+        "replayed": true,
+        "durationS": 31.14
+      },
+      {
+        "index": 6,
+        "heading": "Step 6: Type 1 Test Street in Address and Testville in City",
+        "status": "passed",
+        "actions": [
+          "Waiting for the form fields to be ready",
+          "Type \"1 Test Street\" into \"Address\"",
+          "Type \"Testville\" into \"City\""
+        ],
+        "replayed": true,
+        "durationS": 1.46
+      },
+      {
+        "index": 7,
+        "heading": "Step 7: Click Place order",
+        "status": "passed",
+        "actions": [
+          "Clicking Place order button in checkout form"
+        ],
+        "replayed": true,
+        "durationS": 0.66
+      },
+      {
+        "index": 8,
+        "heading": "Check the expected outcome",
+        "status": "passed",
+        "actions": [
+          "Checking whether the order confirmation page is present",
+          "Checking whether the thank-you heading is present",
+          "Checking whether an order number is present",
+          "Checking whether the total paid amount is present",
+          "Checking whether an error page is present",
+          "Checking whether a stack trace is present",
+          "Checking whether a blank screen is present",
+          "Checking whether the Something went wrong message is present",
+          "assert ✓ an \"Order confirmed\" page is shown with the heading \"Thank you, Test Shopper!\".",
+          "assert ✓ the page shows an order number and a \"Total paid\" amount.",
+          "assert ✓ no error page, stack trace, blank screen or \"Something went wrong\" message is visible."
+        ],
+        "replayed": true,
+        "durationS": 38.57
+      }
+    ],
+    "credits": 0,
+    "durationS": 92.6,
+    "replayed": 8,
+    "authored": 0,
+    "healed": false,
+    "errors": [],
+    "logPath": ".gremlin/evidence/RUN-20261118-173509-8181ec/kane.ndjson",
+    "evidencePack": "~/.testmuai/kaneai/sessions/c9f42a74-61ac-4579-a053-2a1f0acce399/evidence/d26e619b-e36f-4adf-a82a-367c538e8e26.evidence",
+    "sessionId": "c9f42a74-61ac-4579-a053-2a1f0acce399"
+  },
+  "evidence": {
+    "pack": "~/.testmuai/kaneai/sessions/c9f42a74-61ac-4579-a053-2a1f0acce399/evidence/d26e619b-e36f-4adf-a82a-367c538e8e26.evidence",
+    "consoleErrors": [
+      "Failed to load resource: the server responded with a status of 404 (Not Found)"
+    ],
+    "networkFailures": [],
+    "steps": [
+      {
+        "ordinal": 1,
+        "id": "0-1",
+        "kind": "navigate",
+        "status": "passed",
+        "summary": "navigate: Navigate to http://localhost:4000/product/ash-glaze-mug",
+        "url": "https://kaneai-playground.lambdatest.io/",
+        "screenshot": "step-1-0-1.jpg"
+      },
+      {
+        "ordinal": 2,
+        "id": "0-2",
+        "kind": "click",
+        "status": "passed",
+        "summary": "click: Clicking Add to cart for the Ash Glaze Mug",
+        "url": "http://localhost:4000/product/ash-glaze-mug"
+      },
+      {
+        "ordinal": 3,
+        "id": "1-1",
+        "kind": "click",
+        "status": "passed",
+        "summary": "click: Clicking View cart",
+        "url": "http://localhost:4000/product/ash-glaze-mug",
+        "screenshot": "step-3-1-1.png"
+      },
+      {
+        "ordinal": 4,
+        "id": "1-2",
+        "kind": "click",
+        "status": "passed",
+        "summary": "click: Clicking Checkout in the cart summary",
+        "url": "http://localhost:4000/cart"
+      },
+      {
+        "ordinal": 5,
+        "id": "2-1",
+        "kind": "wait",
+        "status": "passed",
+        "summary": "wait: Waiting for the queued plan steps to run",
+        "url": "http://localhost:4000/checkout",
+        "screenshot": "step-5-2-1.jpg"
+      },
+      {
+        "ordinal": 6,
+        "id": "2-2",
+        "kind": "fill",
+        "status": "passed",
+        "summary": "fill: Type \"Test Shopper\" into \"Full name\"",
+        "url": "http://localhost:4000/checkout"
+      },
+      {
+        "ordinal": 7,
+        "id": "2-3",
+        "kind": "fill",
+        "status": "passed",
+        "summary": "fill: Type \"shopper@example.test\" into \"Email\"",
+        "url": "http://localhost:4000/checkout",
+        "screenshot": "step-7-2-3.png"
+      },
+      {
+        "ordinal": 8,
+        "id": "3-1",
+        "kind": "go_back",
+        "status": "passed",
+        "summary": "go_back: Navigate back",
+        "url": "http://localhost:4000/checkout"
+      },
+      {
+        "ordinal": 9,
+        "id": "3-2",
+        "kind": "wait",
+        "status": "passed",
+        "summary": "wait: Waiting for the browser back button returning to the previous history entry",
+        "url": "http://localhost:4000/cart",
+        "screenshot": "step-9-3-2.jpg"
+      },
+      {
+        "ordinal": 10,
+        "id": "3-3",
+        "kind": "go_forward",
+        "status": "passed",
+        "summary": "go_forward: Navigate forward",
+        "url": "http://localhost:4000/cart"
+      },
+      {
+        "ordinal": 11,
+        "id": "3-4",
+        "kind": "wait",
+        "status": "passed",
+        "summary": "wait: Waiting for the Checkout page to load",
+        "url": "http://localhost:4000/checkout",
+        "screenshot": "step-11-3-4.jpg"
+      },
+      {
+        "ordinal": 12,
+        "id": "4-1",
+        "kind": "analyze",
+        "status": "passed",
+        "summary": "analyze: Checking whether the Full name field contains content",
+        "url": "http://localhost:4000/checkout"
+      },
+      {
+        "ordinal": 13,
+        "id": "4-2",
+        "kind": "analyze",
+        "status": "passed",
+        "summary": "analyze: Checking whether the Email field contains content",
+        "url": "http://localhost:4000/checkout",
+        "screenshot": "step-13-4-2.jpg"
+      },
+      {
+        "ordinal": 14,
+        "id": "5-1",
+        "kind": "wait",
+        "status": "passed",
+        "summary": "wait: Waiting for the form fields to be ready",
+        "url": "http://localhost:4000/checkout"
+      },
+      {
+        "ordinal": 15,
+        "id": "5-2",
+        "kind": "fill",
+        "status": "passed",
+        "summary": "fill: Type \"1 Test Street\" into \"Address\"",
+        "url": "http://localhost:4000/checkout",
+        "screenshot": "step-15-5-2.png"
+      },
+      {
+        "ordinal": 16,
+        "id": "5-3",
+        "kind": "fill",
+        "status": "passed",
+        "summary": "fill: Type \"Testville\" into \"City\"",
+        "url": "http://localhost:4000/checkout"
+      },
+      {
+        "ordinal": 17,
+        "id": "6-1",
+        "kind": "click",
+        "status": "passed",
+        "summary": "click: Clicking Place order button in checkout form",
+        "url": "http://localhost:4000/checkout",
+        "screenshot": "step-17-6-1.png"
+      },
+      {
+        "ordinal": 18,
+        "id": "7-1",
+        "kind": "analyze",
+        "status": "passed",
+        "summary": "analyze: Checking whether the order confirmation page is present",
+        "url": "http://localhost:4000/order/1041"
+      },
+      {
+        "ordinal": 19,
+        "id": "7-2",
+        "kind": "analyze",
+        "status": "passed",
+        "summary": "analyze: Checking whether the thank-you heading is present",
+        "url": "http://localhost:4000/order/1041",
+        "screenshot": "step-19-7-2.jpg"
+      },
+      {
+        "ordinal": 20,
+        "id": "7-3",
+        "kind": "analyze",
+        "status": "passed",
+        "summary": "analyze: Checking whether an order number is present",
+        "url": "http://localhost:4000/order/1041"
+      },
+      {
+        "ordinal": 21,
+        "id": "7-4",
+        "kind": "analyze",
+        "status": "passed",
+        "summary": "analyze: Checking whether the total paid amount is present",
+        "url": "http://localhost:4000/order/1041",
+        "screenshot": "step-21-7-4.jpg"
+      },
+      {
+        "ordinal": 22,
+        "id": "7-5",
+        "kind": "analyze",
+        "status": "passed",
+        "summary": "analyze: Checking whether an error page is present",
+        "url": "http://localhost:4000/order/1041"
+      },
+      {
+        "ordinal": 23,
+        "id": "7-6",
+        "kind": "analyze",
+        "status": "passed",
+        "summary": "analyze: Checking whether a stack trace is present",
+        "url": "http://localhost:4000/order/1041",
+        "screenshot": "step-23-7-6.jpg"
+      },
+      {
+        "ordinal": 24,
+        "id": "7-7",
+        "kind": "analyze",
+        "status": "passed",
+        "summary": "analyze: Checking whether a blank screen is present",
+        "url": "http://localhost:4000/order/1041"
+      },
+      {
+        "ordinal": 25,
+        "id": "7-8",
+        "kind": "analyze",
+        "status": "passed",
+        "summary": "analyze: Checking whether the Something went wrong message is present",
+        "url": "http://localhost:4000/order/1041",
+        "screenshot": "step-25-7-8.jpg"
+      },
+      {
+        "ordinal": 26,
+        "id": "7-9",
+        "kind": "assert",
+        "status": "passed",
+        "summary": "assert: an \"Order confirmed\" page is shown with the heading \"Thank you, Test Shopper!\".",
+        "url": "http://localhost:4000/order/1041"
+      },
+      {
+        "ordinal": 27,
+        "id": "7-10",
+        "kind": "assert",
+        "status": "passed",
+        "summary": "assert: the page shows an order number and a \"Total paid\" amount.",
+        "url": "http://localhost:4000/order/1041",
+        "screenshot": "step-27-7-10.jpg"
+      },
+      {
+        "ordinal": 28,
+        "id": "7-11",
+        "kind": "assert",
+        "status": "passed",
+        "summary": "assert: no error page, stack trace, blank screen or \"Something went wrong\" message is vi",
+        "url": "http://localhost:4000/order/1041",
+        "screenshot": "step-28-7-11.jpg"
+      }
+    ],
+    "screenshots": [
+      "step-1-0-1.jpg",
+      "step-3-1-1.png",
+      "step-5-2-1.jpg",
+      "step-7-2-3.png",
+      "step-9-3-2.jpg",
+      "step-11-3-4.jpg",
+      "step-13-4-2.jpg",
+      "step-15-5-2.png",
+      "step-17-6-1.png",
+      "step-19-7-2.jpg",
+      "step-21-7-4.jpg",
+      "step-23-7-6.jpg",
+      "step-25-7-8.jpg",
+      "step-27-7-10.jpg",
+      "step-28-7-11.jpg"
+    ]
+  },
+  "endedAt": "2026-11-18T12:06:41.874Z"
+}

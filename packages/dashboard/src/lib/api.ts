@@ -157,6 +157,7 @@ export interface Bug {
   createdAt: string
   updatedAt: string
   fixedAt?: string
+  regressedAt?: string
   credits: number
 }
 

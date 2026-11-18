@@ -1,0 +1,83 @@
+{
+  "pack": "~/.testmuai/kaneai/sessions/52a7bf0b-9e4a-4bae-8b24-6c550f28d295/evidence/8f77a6b2-c761-437c-8847-2e14c517ef7c.evidence",
+  "consoleErrors": [
+    "Failed to load resource: the server responded with a status of 404 (Not Found)"
+  ],
+  "networkFailures": [],
+  "steps": [
+    {
+      "ordinal": 1,
+      "id": "0-1",
+      "kind": "navigate",
+      "status": "passed",
+      "summary": "navigate: Navigate to http://localhost:4000/",
+      "url": "http://localhost:4000/",
+      "screenshot": "step-1-0-1.jpg"
+    },
+    {
+      "ordinal": 2,
+      "id": "0-2",
+      "kind": "type",
+      "status": "passed",
+      "summary": "type: Typing mug in the search box",
+      "url": "http://localhost:4000/",
+      "screenshot": "step-2-0-2.png"
+    },
+    {
+      "ordinal": 3,
+      "id": "0-3",
+      "kind": "",
+      "status": "passed",
+      "summary": "wait: Waiting after confirming the Search box contains the requested text",
+      "url": "http://localhost:4000/",
+      "screenshot": "step-3-0-3.jpg"
+    },
+    {
+      "ordinal": 4,
+      "id": "1-1",
+      "kind": "click",
+      "status": "passed",
+      "summary": "click: Clicking Search",
+      "url": "http://localhost:4000/",
+      "screenshot": "step-4-1-1.png"
+    },
+    {
+      "ordinal": 5,
+      "id": "2-1",
+      "kind": "analyze",
+      "status": "passed",
+      "summary": "analyze: no text in the results heading is struck through",
+      "url": "http://localhost:4000/search?q=%3Cs%3Emug%3C%2Fs%3E",
+      "screenshot": "step-5-2-1.jpg"
+    },
+    {
+      "ordinal": 6,
+      "id": "2-2",
+      "kind": "assert",
+      "status": "failed",
+      "summary": "assert: the results heading shows the text <s>mug</s> literally, with the angle brackets",
+      "url": "http://localhost:4000/search?q=%3Cs%3Emug%3C%2Fs%3E",
+      "screenshot": "step-6-2-2.jpg"
+    }
+  ],
+  "screenshots": [
+    "step-1-0-1.jpg",
+    "step-2-0-2.png",
+    "step-3-0-3.jpg",
+    "step-4-1-1.png",
+    "step-5-2-1.jpg",
+    "step-6-2-2.jpg"
+  ],
+  "failure": {
+    "step": "2-2",
+    "message": "Checkpoint assertion failed: \"the results heading shows the text <s>mug</s> literally, with the angle brackets visible\"",
+    "pageUrl": "http://localhost:4000/search?q=%3Cs%3Emug%3C%2Fs%3E",
+    "title": "Search heading renders query markup as HTML",
+    "rootCause": "The page treated the submitted text `<s>mug</s>` as HTML. As a result, the angle brackets disappeared and “mug” was displayed with a line through it rather than as literal text.",
+    "category": "application_issue/ui_data_defect",
+    "confidence": 0.98,
+    "severity": "major",
+    "suggestedFix": "Escape search-query text before placing it in the results heading, then add a regression test for HTML-like queries such as `<s>mug</s>`.",
+    "screenshot": "step-6-2-2.jpg"
+  }
+}

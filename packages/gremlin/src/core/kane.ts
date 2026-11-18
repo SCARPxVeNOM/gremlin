@@ -3,6 +3,7 @@ import { createWriteStream } from 'node:fs';
 import { dirname } from 'node:path';
 import { ensureDir } from './paths.ts';
 import { round } from './util.ts';
+import { onInterrupt } from './interrupt.ts';
 
 export const KANE_BIN = process.env.GREMLIN_KANE_BIN ?? 'kane-cli';
 
@@ -190,6 +191,7 @@ export async function runKaneTest(opts: KaneRunOptions): Promise<KaneRunResult> 
       env: { ...process.env, NO_COLOR: '1', FORCE_COLOR: '0' },
       stdio: ['ignore', 'pipe', 'pipe'],
     });
+    const release = onInterrupt(() => child.kill('SIGTERM'));
     let buf = '';
     child.stdout.on('data', (chunk: Buffer) => {
       log.write(chunk);
@@ -225,6 +227,7 @@ export async function runKaneTest(opts: KaneRunOptions): Promise<KaneRunResult> 
       resolve(127);
     });
     child.on('close', (code) => {
+      release();
       if (timer) clearTimeout(timer);
       if (buf.trim().startsWith('{')) {
         try {

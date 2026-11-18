@@ -1,0 +1,35 @@
+{
+  "id": "BUG-003",
+  "title": "Search for 100% stoneware renders error page",
+  "origin": "breaker",
+  "status": "candidate",
+  "severity": "high",
+  "confidence": 0.99,
+  "flowId": "adversarial/searching-for-a-phrase-with-a-percent-sign-shows-results",
+  "attack": "input.percent-in-search",
+  "tags": [
+    "search",
+    "input"
+  ],
+  "failingStep": "Check the expected outcome",
+  "reason": "Checkpoint assertion failed: \"A results page is shown with a heading that includes \"100% stoneware\".\"",
+  "verdict": {
+    "confirmed": true,
+    "family": "application_issue",
+    "category": "functional_defect",
+    "severity": "major",
+    "confidence": 0.95,
+    "title": "Search for 100% stoneware renders error page",
+    "oneLiner": "Searching for “100% stoneware” shows an error page instead of a results page.",
+    "rootCause": "The search page could not display results for the requested search term and showed an error message instead.",
+    "suggestion": "Investigate why the search route for “100% stoneware” enters the error state. Ensure it shows a heading containing the query and either matching products or a no-results message."
+  },
+  "runs": [
+    "RUN-20261118-164132-5f61a3",
+    "RUN-20261118-165759-7f706d"
+  ],
+  "attempts": [],
+  "createdAt": "2026-11-18T11:13:32.037Z",
+  "updatedAt": "2026-11-18T11:30:08.939Z",
+  "credits": 86.09
+}

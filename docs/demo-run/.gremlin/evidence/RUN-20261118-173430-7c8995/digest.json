@@ -1,0 +1,121 @@
+{
+  "pack": "~/.testmuai/kaneai/sessions/ef781509-389f-4b70-b478-a74ad73563ba/evidence/5dcca904-feae-4988-89db-c1c484ca619a.evidence",
+  "consoleErrors": [
+    "Failed to load resource: the server responded with a status of 404 (Not Found)"
+  ],
+  "networkFailures": [],
+  "steps": [
+    {
+      "ordinal": 1,
+      "id": "0-1",
+      "kind": "navigate",
+      "status": "passed",
+      "summary": "navigate: Navigate to http://localhost:4000/product/ember-vase",
+      "url": "https://kaneai-playground.lambdatest.io/",
+      "screenshot": "step-1-0-1.jpg"
+    },
+    {
+      "ordinal": 2,
+      "id": "0-2",
+      "kind": "click",
+      "status": "passed",
+      "summary": "click: Clicking Add to cart button below the product description",
+      "url": "http://localhost:4000/product/ember-vase",
+      "screenshot": "step-2-0-2.png"
+    },
+    {
+      "ordinal": 3,
+      "id": "1-1",
+      "kind": "click",
+      "status": "passed",
+      "summary": "click: Clicking View cart to go to the checkout page",
+      "url": "http://localhost:4000/product/ember-vase",
+      "screenshot": "step-3-1-1.png"
+    },
+    {
+      "ordinal": 4,
+      "id": "2-1",
+      "kind": "click",
+      "status": "passed",
+      "summary": "click: Clicking Checkout link",
+      "url": "http://localhost:4000/cart",
+      "screenshot": "step-4-2-1.png"
+    },
+    {
+      "ordinal": 5,
+      "id": "2-2",
+      "kind": "wait",
+      "status": "passed",
+      "summary": "wait: Waiting for the coupon code to apply",
+      "url": "http://localhost:4000/checkout",
+      "screenshot": "step-5-2-2.jpg"
+    },
+    {
+      "ordinal": 6,
+      "id": "2-3",
+      "kind": "fill",
+      "status": "passed",
+      "summary": "fill: Type \"WELCOME10\" into \"Coupon code\"",
+      "url": "http://localhost:4000/checkout",
+      "screenshot": "step-6-2-3.png"
+    },
+    {
+      "ordinal": 7,
+      "id": "2-4",
+      "kind": "click",
+      "status": "passed",
+      "summary": "click: Click \"Apply\"",
+      "url": "http://localhost:4000/checkout",
+      "screenshot": "step-7-2-4.png"
+    },
+    {
+      "ordinal": 8,
+      "id": "3-1",
+      "kind": "analyze",
+      "status": "passed",
+      "summary": "analyze: Checking whether the welcome discount message is present",
+      "url": "http://localhost:4000/checkout",
+      "screenshot": "step-8-3-1.jpg"
+    },
+    {
+      "ordinal": 9,
+      "id": "3-2",
+      "kind": "analyze",
+      "status": "passed",
+      "summary": "analyze: Reading the discount from the order summary",
+      "url": "http://localhost:4000/checkout",
+      "screenshot": "step-9-3-2.jpg"
+    },
+    {
+      "ordinal": 10,
+      "id": "3-3",
+      "kind": "assert",
+      "status": "passed",
+      "summary": "assert: A message says the 10% welcome discount was applied.",
+      "url": "http://localhost:4000/checkout",
+      "screenshot": "step-10-3-3.jpg"
+    },
+    {
+      "ordinal": 11,
+      "id": "3-4",
+      "kind": "assert",
+      "status": "passed",
+      "summary": "assert: the order summary shows a discount of $6.40.",
+      "url": "http://localhost:4000/checkout",
+      "screenshot": "step-11-3-4.jpg"
+    }
+  ],
+  "screenshots": [
+    "step-1-0-1.jpg",
+    "step-2-0-2.png",
+    "step-3-1-1.png",
+    "step-4-2-1.png",
+    "step-5-2-2.jpg",
+    "step-6-2-3.png",
+    "step-7-2-4.png",
+    "step-8-3-1.jpg",
+    "step-9-3-2.jpg",
+    "step-10-3-3.jpg",
+    "step-11-3-4.jpg"
+  ]
+}

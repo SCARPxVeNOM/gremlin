@@ -38,8 +38,10 @@ export interface PlannedAttack extends AttackFlow {
 export interface Finding {
   flow: Flow;
   run: RunRecord;
-  outcome: 'bug' | 'duplicate' | 'held' | 'flaky' | 'noise' | 'error';
+  outcome: 'bug' | 'duplicate' | 'held' | 'flaky' | 'noise' | 'disputed' | 'error';
   bug?: BugRecord;
+  /** Set when Kane blamed the flow but the agent argues the product is at fault. */
+  dispute?: string;
 }
 
 export interface BreakerReport {
@@ -221,19 +223,22 @@ export async function runBreaker(project: Project, opts: BreakerOptions = {}): P
       }
       report.credits += run.credits;
       reporter.info(`  → ${describeRun(run)}`);
+      let dispute: string | undefined;
       if (shouldRevise(flow, run) && report.credits < config.budget.per_run) {
         reporter.info('  Kane blamed the flow, not the product: asking the agent to revise it once …');
-        const revised = await reviseFlow(project, flow, run, job.id);
-        if (revised) {
-          flow = revised;
-          revised.steps.forEach((s, i) => reporter.info(`    ${i + 1}. ${s}`));
-          reporter.info(`    Expect: ${revised.expect.join(' · ')}`);
+        const revision = await reviseFlow(project, flow, run, job.id);
+        if (revision) {
+          flow = revision.flow;
+          dispute = revision.dispute;
+          flow.steps.forEach((s, i) => reporter.info(`    ${i + 1}. ${s}`));
+          reporter.info(`    Expect: ${flow.expect.join(' · ')}`);
+          if (dispute) reporter.info(`    The agent disputes Kane's triage: ${dispute}`);
           run = await runFlow(project, flow, { purpose: 'breaker', job: job.id, reporter });
           report.credits += run.credits;
           reporter.info(`  → ${describeRun(run)}`);
         }
       }
-      report.findings.push(triageFinding(project, flow, run, p, job));
+      report.findings.push(triageFinding(project, flow, run, p, job, dispute));
     }
 
     report.findings.sort((a, b) => rank(b) - rank(a));
@@ -258,7 +263,7 @@ function rank(f: Finding): number {
   return SEVERITY_ORDER.indexOf(f.bug.severity) * 10 + f.bug.confidence;
 }
 
-function triageFinding(project: Project, flow: Flow, run: RunRecord, p: PlannedAttack, job: Job): Finding {
+function triageFinding(project: Project, flow: Flow, run: RunRecord, p: PlannedAttack, job: Job, dispute?: string): Finding {
   const { paths } = project;
   if (run.status === 'passed') {
     // the app held: keep the attack as a guard against future breakage
@@ -275,6 +280,11 @@ function triageFinding(project: Project, flow: Flow, run: RunRecord, p: PlannedA
   if (isAutomationFault(run.kane?.verdict)) {
     // Kane says the attack itself was at fault, not the product: don't cry wolf
     recordAttack(paths, p.attack, false);
+    if (dispute) {
+      // Kane's verdict stands (nothing is filed), but a disagreement with the agent is for a human to settle
+      emit(paths, 'warn', `Kane and the agent disagree about "${flow.title}": Kane blamed the flow, the agent says the product is at fault. A human should decide.`, { runId: run.id, flowId: flow.id, dispute }, job.id);
+      return { flow, run, outcome: 'disputed', dispute };
+    }
     emit(paths, 'info', `Kane judged "${flow.title}" an automation problem, not a product bug; held for review`, { runId: run.id }, job.id);
     return { flow, run, outcome: 'noise' };
   }
@@ -339,6 +349,15 @@ function writeBreakerReport(project: Project, r: BreakerReport): string {
     '',
     ...(r.findings.some((f) => f.outcome === 'duplicate')
       ? ['## Same bug, found again', ...r.findings.filter((f) => f.outcome === 'duplicate').map((f) => `- ${f.flow.title}: reproduced ${f.bug!.id}`), '']
+      : []),
+    ...(r.findings.some((f) => f.outcome === 'disputed')
+      ? [
+          '## Disputed (Kane blamed the flow, the agent blames the product: a human decides)',
+          ...r.findings
+            .filter((f) => f.outcome === 'disputed')
+            .map((f) => `- ${f.flow.id}: ${f.flow.title}\n  - Kane: ${f.run.kane?.verdict?.oneLiner ?? f.run.kane?.reason ?? ''}\n  - Agent: ${f.dispute}`),
+          '',
+        ]
       : []),
     '## Held (the app handled the attack; saved as adversarial guards)',
     ...r.findings.filter((f) => f.outcome === 'held').map((f) => `- ${f.flow.title}`),

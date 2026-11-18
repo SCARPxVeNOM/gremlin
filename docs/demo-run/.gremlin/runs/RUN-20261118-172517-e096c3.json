@@ -1,0 +1,197 @@
+{
+  "id": "RUN-20261118-172517-e096c3",
+  "flowId": "happy/coupon-at-checkout",
+  "flowTitle": "A welcome coupon takes 10% off",
+  "flowType": "happy",
+  "flowHash": "e7c8b3c406e2f71d",
+  "purpose": "guard",
+  "job": "guard-593348",
+  "target": "http://localhost:4000/product/ember-vase",
+  "startedAt": "2026-11-18T11:55:17.722Z",
+  "status": "passed",
+  "credits": 0,
+  "kane": {
+    "status": "passed",
+    "exitCode": 0,
+    "steps": [
+      {
+        "index": 1,
+        "heading": "Step 1: Click Add to cart",
+        "status": "passed",
+        "actions": [
+          "Navigate to http://localhost:4000/product/ember-vase",
+          "Clicking Add to cart button below the product description"
+        ],
+        "replayed": true,
+        "durationS": 1.27
+      },
+      {
+        "index": 2,
+        "heading": "Step 2: Go to the checkout page",
+        "status": "passed",
+        "actions": [
+          "Clicking View cart to go to the checkout page"
+        ],
+        "replayed": true,
+        "durationS": 0.69
+      },
+      {
+        "index": 3,
+        "heading": "Step 3: Type WELCOME10 into the coupon code field and click Apply",
+        "status": "passed",
+        "actions": [
+          "Clicking Checkout link",
+          "Waiting for the coupon code to apply",
+          "Type \"WELCOME10\" into \"Coupon code\"",
+          "Click \"Apply\""
+        ],
+        "replayed": true,
+        "durationS": 2.6
+      },
+      {
+        "index": 4,
+        "heading": "Check the expected outcome",
+        "status": "passed",
+        "actions": [
+          "Checking whether the welcome discount message is present",
+          "Reading the discount from the order summary",
+          "assert ✓ A message says the 10% welcome discount was applied.",
+          "assert ✓ the order summary shows a discount of $6.40."
+        ],
+        "replayed": true,
+        "durationS": 0.26
+      }
+    ],
+    "credits": 0,
+    "durationS": 16.9,
+    "replayed": 4,
+    "authored": 0,
+    "healed": false,
+    "errors": [],
+    "logPath": ".gremlin/evidence/RUN-20261118-172517-e096c3/kane.ndjson",
+    "evidencePack": "~/.testmuai/kaneai/sessions/a40e8e67-134c-424a-a7b8-9bfa4d9fc493/evidence/ea47d206-e8d9-4848-bdd9-13f194cc0bf2.evidence",
+    "sessionId": "a40e8e67-134c-424a-a7b8-9bfa4d9fc493"
+  },
+  "evidence": {
+    "pack": "~/.testmuai/kaneai/sessions/a40e8e67-134c-424a-a7b8-9bfa4d9fc493/evidence/ea47d206-e8d9-4848-bdd9-13f194cc0bf2.evidence",
+    "consoleErrors": [
+      "Failed to load resource: the server responded with a status of 404 (Not Found)"
+    ],
+    "networkFailures": [],
+    "steps": [
+      {
+        "ordinal": 1,
+        "id": "0-1",
+        "kind": "navigate",
+        "status": "passed",
+        "summary": "navigate: Navigate to http://localhost:4000/product/ember-vase",
+        "url": "https://kaneai-playground.lambdatest.io/",
+        "screenshot": "step-1-0-1.jpg"
+      },
+      {
+        "ordinal": 2,
+        "id": "0-2",
+        "kind": "click",
+        "status": "passed",
+        "summary": "click: Clicking Add to cart button below the product description",
+        "url": "http://localhost:4000/product/ember-vase",
+        "screenshot": "step-2-0-2.png"
+      },
+      {
+        "ordinal": 3,
+        "id": "1-1",
+        "kind": "click",
+        "status": "passed",
+        "summary": "click: Clicking View cart to go to the checkout page",
+        "url": "http://localhost:4000/product/ember-vase",
+        "screenshot": "step-3-1-1.png"
+      },
+      {
+        "ordinal": 4,
+        "id": "2-1",
+        "kind": "click",
+        "status": "passed",
+        "summary": "click: Clicking Checkout link",
+        "url": "http://localhost:4000/cart",
+        "screenshot": "step-4-2-1.png"
+      },
+      {
+        "ordinal": 5,
+        "id": "2-2",
+        "kind": "wait",
+        "status": "passed",
+        "summary": "wait: Waiting for the coupon code to apply",
+        "url": "http://localhost:4000/checkout",
+        "screenshot": "step-5-2-2.jpg"
+      },
+      {
+        "ordinal": 6,
+        "id": "2-3",
+        "kind": "fill",
+        "status": "passed",
+        "summary": "fill: Type \"WELCOME10\" into \"Coupon code\"",
+        "url": "http://localhost:4000/checkout",
+        "screenshot": "step-6-2-3.png"
+      },
+      {
+        "ordinal": 7,
+        "id": "2-4",
+        "kind": "click",
+        "status": "passed",
+        "summary": "click: Click \"Apply\"",
+        "url": "http://localhost:4000/checkout",
+        "screenshot": "step-7-2-4.png"
+      },
+      {
+        "ordinal": 8,
+        "id": "3-1",
+        "kind": "analyze",
+        "status": "passed",
+        "summary": "analyze: Checking whether the welcome discount message is present",
+        "url": "http://localhost:4000/checkout",
+        "screenshot": "step-8-3-1.jpg"
+      },
+      {
+        "ordinal": 9,
+        "id": "3-2",
+        "kind": "analyze",
+        "status": "passed",
+        "summary": "analyze: Reading the discount from the order summary",
+        "url": "http://localhost:4000/checkout",
+        "screenshot": "step-9-3-2.jpg"
+      },
+      {
+        "ordinal": 10,
+        "id": "3-3",
+        "kind": "assert",
+        "status": "passed",
+        "summary": "assert: A message says the 10% welcome discount was applied.",
+        "url": "http://localhost:4000/checkout",
+        "screenshot": "step-10-3-3.jpg"
+      },
+      {
+        "ordinal": 11,
+        "id": "3-4",
+        "kind": "assert",
+        "status": "passed",
+        "summary": "assert: the order summary shows a discount of $6.40.",
+        "url": "http://localhost:4000/checkout",
+        "screenshot": "step-11-3-4.jpg"
+      }
+    ],
+    "screenshots": [
+      "step-1-0-1.jpg",
+      "step-2-0-2.png",
+      "step-3-1-1.png",
+      "step-4-2-1.png",
+      "step-5-2-2.jpg",
+      "step-6-2-3.png",
+      "step-7-2-4.png",
+      "step-8-3-1.jpg",
+      "step-9-3-2.jpg",
+      "step-10-3-3.jpg",
+      "step-11-3-4.jpg"
+    ]
+  },
+  "endedAt": "2026-11-18T11:55:34.633Z"
+}

@@ -1,9 +1,10 @@
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Check, Lock, MoreHorizontal, Play, Route, Search, ShieldAlert, Archive } from 'lucide-react'
+import { Check, Lock, MoreHorizontal, Play, Route, Scale, Search, ShieldAlert, Archive } from 'lucide-react'
 import { toast } from 'sonner'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Input } from '@/components/ui/input'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
@@ -110,6 +111,12 @@ export default function Flows() {
                       <span className="truncate">{f.title}</span>
                       {f.locked && <Lock className="text-muted-foreground size-3 shrink-0" aria-label="Locked" />}
                       {f.tampered && <ShieldAlert className="text-critical size-3.5 shrink-0" aria-label="Edited without approval" />}
+                      {f.status === 'draft' && isDisputed(f) && (
+                        <Badge variant="outline" className="shrink-0 gap-1 font-normal">
+                          <Scale className="text-warning" />
+                          Disputed
+                        </Badge>
+                      )}
                     </Link>
                     <div className="text-muted-foreground mt-0.5 flex gap-2 truncate text-xs">
                       <span className="font-mono">{f.start}</span>
@@ -161,4 +168,9 @@ export default function Flows() {
       )}
     </Page>
   )
+}
+
+/** Kane blamed the flow, but the agent that wrote it argues the product is at fault: a human decides. */
+export function isDisputed(f: FlowView) {
+  return /disputes Kane's triage/.test(f.notes)
 }

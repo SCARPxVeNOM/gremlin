@@ -1,0 +1,259 @@
+{
+  "id": "RUN-20261118-172940-39aace",
+  "flowId": "happy/buy-a-mug",
+  "flowTitle": "A shopper can buy a mug",
+  "flowType": "happy",
+  "flowHash": "245c9400c9533864",
+  "purpose": "guard",
+  "job": "guard-fa339a",
+  "target": "http://localhost:4000/",
+  "startedAt": "2026-11-18T11:59:40.550Z",
+  "status": "passed",
+  "credits": 0,
+  "kane": {
+    "status": "passed",
+    "exitCode": 0,
+    "steps": [
+      {
+        "index": 1,
+        "heading": "Step 1: Open the Ash Glaze Mug from the shop",
+        "status": "passed",
+        "actions": [
+          "Navigate to http://localhost:4000/",
+          "Clicking the Ash Glaze Mug in the shop product grid"
+        ],
+        "replayed": true,
+        "durationS": 1.31
+      },
+      {
+        "index": 2,
+        "heading": "Step 2: Click Add to cart",
+        "status": "passed",
+        "actions": [
+          "Clicking Add to cart for Ash Glaze Mug"
+        ],
+        "replayed": true,
+        "durationS": 0.72
+      },
+      {
+        "index": 3,
+        "heading": "Step 3: Open the cart and click Checkout",
+        "status": "passed",
+        "actions": [
+          "Opening the cart dropdown",
+          "Clicking Checkout in the cart summary below the total"
+        ],
+        "replayed": true,
+        "durationS": 1.35
+      },
+      {
+        "index": 4,
+        "heading": "Step 4: Fill in the checkout form with the name Sam Rivera, the email s…",
+        "status": "passed",
+        "actions": [
+          "Waiting for the form fields to be filled in",
+          "Type \"Sam Rivera\" into \"Full name\"",
+          "Type \"sam@example.test\" into \"Email\"",
+          "Type \"12 Clay Street\" into \"Address\"",
+          "Type \"Portland\" into \"City\""
+        ],
+        "replayed": true,
+        "durationS": 1.8
+      },
+      {
+        "index": 5,
+        "heading": "Step 5: Click Place order",
+        "status": "passed",
+        "actions": [
+          "Clicking Place order in the checkout form"
+        ],
+        "replayed": true,
+        "durationS": 0.69
+      },
+      {
+        "index": 6,
+        "heading": "Check the expected outcome",
+        "status": "passed",
+        "actions": [
+          "Checking whether the order confirmation thank-you message is present",
+          "Checking whether the confirmation order number is present",
+          "assert ✓ an order confirmation page says \"Thank you, Sam Rivera!\"",
+          "assert ✓ the confirmation shows an order number"
+        ],
+        "replayed": true,
+        "durationS": 0.3
+      }
+    ],
+    "credits": 0,
+    "durationS": 18.9,
+    "replayed": 6,
+    "authored": 0,
+    "healed": false,
+    "errors": [],
+    "logPath": ".gremlin/evidence/RUN-20261118-172940-39aace/kane.ndjson",
+    "evidencePack": "~/.testmuai/kaneai/sessions/395f0afb-7a3b-4b2e-ac7c-d21c014ec7f6/evidence/627df2b7-6db7-4e0a-83c1-532982d69368.evidence",
+    "sessionId": "395f0afb-7a3b-4b2e-ac7c-d21c014ec7f6"
+  },
+  "evidence": {
+    "pack": "~/.testmuai/kaneai/sessions/395f0afb-7a3b-4b2e-ac7c-d21c014ec7f6/evidence/627df2b7-6db7-4e0a-83c1-532982d69368.evidence",
+    "consoleErrors": [
+      "Failed to load resource: the server responded with a status of 404 (Not Found)"
+    ],
+    "networkFailures": [],
+    "steps": [
+      {
+        "ordinal": 1,
+        "id": "0-1",
+        "kind": "navigate",
+        "status": "passed",
+        "summary": "navigate: Navigate to http://localhost:4000/",
+        "url": "https://kaneai-playground.lambdatest.io/",
+        "screenshot": "step-1-0-1.jpg"
+      },
+      {
+        "ordinal": 2,
+        "id": "0-2",
+        "kind": "click",
+        "status": "passed",
+        "summary": "click: Clicking the Ash Glaze Mug in the shop product grid",
+        "url": "http://localhost:4000/",
+        "screenshot": "step-2-0-2.png"
+      },
+      {
+        "ordinal": 3,
+        "id": "1-1",
+        "kind": "click",
+        "status": "passed",
+        "summary": "click: Clicking Add to cart for Ash Glaze Mug",
+        "url": "http://localhost:4000/product/ash-glaze-mug",
+        "screenshot": "step-3-1-1.png"
+      },
+      {
+        "ordinal": 4,
+        "id": "2-1",
+        "kind": "click",
+        "status": "passed",
+        "summary": "click: Opening the cart dropdown",
+        "url": "http://localhost:4000/product/ash-glaze-mug",
+        "screenshot": "step-4-2-1.png"
+      },
+      {
+        "ordinal": 5,
+        "id": "2-2",
+        "kind": "click",
+        "status": "passed",
+        "summary": "click: Clicking Checkout in the cart summary below the total",
+        "url": "http://localhost:4000/cart",
+        "screenshot": "step-5-2-2.png"
+      },
+      {
+        "ordinal": 6,
+        "id": "3-1",
+        "kind": "wait",
+        "status": "passed",
+        "summary": "wait: Waiting for the form fields to be filled in",
+        "url": "http://localhost:4000/checkout",
+        "screenshot": "step-6-3-1.jpg"
+      },
+      {
+        "ordinal": 7,
+        "id": "3-2",
+        "kind": "fill",
+        "status": "passed",
+        "summary": "fill: Type \"Sam Rivera\" into \"Full name\"",
+        "url": "http://localhost:4000/checkout",
+        "screenshot": "step-7-3-2.png"
+      },
+      {
+        "ordinal": 8,
+        "id": "3-3",
+        "kind": "fill",
+        "status": "passed",
+        "summary": "fill: Type \"sam@example.test\" into \"Email\"",
+        "url": "http://localhost:4000/checkout",
+        "screenshot": "step-8-3-3.png"
+      },
+      {
+        "ordinal": 9,
+        "id": "3-4",
+        "kind": "fill",
+        "status": "passed",
+        "summary": "fill: Type \"12 Clay Street\" into \"Address\"",
+        "url": "http://localhost:4000/checkout",
+        "screenshot": "step-9-3-4.png"
+      },
+      {
+        "ordinal": 10,
+        "id": "3-5",
+        "kind": "fill",
+        "status": "passed",
+        "summary": "fill: Type \"Portland\" into \"City\"",
+        "url": "http://localhost:4000/checkout",
+        "screenshot": "step-10-3-5.png"
+      },
+      {
+        "ordinal": 11,
+        "id": "4-1",
+        "kind": "click",
+        "status": "passed",
+        "summary": "click: Clicking Place order in the checkout form",
+        "url": "http://localhost:4000/checkout",
+        "screenshot": "step-11-4-1.png"
+      },
+      {
+        "ordinal": 12,
+        "id": "5-1",
+        "kind": "analyze",
+        "status": "passed",
+        "summary": "analyze: Checking whether the order confirmation thank-you message is present",
+        "url": "http://localhost:4000/order/1041",
+        "screenshot": "step-12-5-1.jpg"
+      },
+      {
+        "ordinal": 13,
+        "id": "5-2",
+        "kind": "analyze",
+        "status": "passed",
+        "summary": "analyze: Checking whether the confirmation order number is present",
+        "url": "http://localhost:4000/order/1041",
+        "screenshot": "step-13-5-2.jpg"
+      },
+      {
+        "ordinal": 14,
+        "id": "5-3",
+        "kind": "assert",
+        "status": "passed",
+        "summary": "assert: an order confirmation page says \"Thank you, Sam Rivera!\"",
+        "url": "http://localhost:4000/order/1041",
+        "screenshot": "step-14-5-3.jpg"
+      },
+      {
+        "ordinal": 15,
+        "id": "5-4",
+        "kind": "assert",
+        "status": "passed",
+        "summary": "assert: the confirmation shows an order number",
+        "url": "http://localhost:4000/order/1041",
+        "screenshot": "step-15-5-4.jpg"
+      }
+    ],
+    "screenshots": [
+      "step-1-0-1.jpg",
+      "step-2-0-2.png",
+      "step-3-1-1.png",
+      "step-4-2-1.png",
+      "step-5-2-2.png",
+      "step-6-3-1.jpg",
+      "step-7-3-2.png",
+      "step-8-3-3.png",
+      "step-9-3-4.png",
+      "step-10-3-5.png",
+      "step-11-4-1.png",
+      "step-12-5-1.jpg",
+      "step-13-5-2.jpg",
+      "step-14-5-3.jpg",
+      "step-15-5-4.jpg"
+    ]
+  },
+  "endedAt": "2026-11-18T11:59:59.523Z"
+}

@@ -177,3 +177,27 @@ test('a second attack on the same defect is folded into the existing bug', async
   const unrelated = failing('RUN-D', 'validation_defect', 'Checkout accepts an email address without a domain', 'http://localhost:4000/checkout');
   assert.equal(findDuplicateBug(p.paths, unrelated, 'Checkout accepts an email address without a domain'), undefined);
 });
+
+test('after a change, an app Gremlin started is restarted, and a broken startup reports its stderr', async () => {
+  const { ensureApp, isReachable, restartApp } = await import('../src/core/target.ts');
+  const port = 41000 + Math.floor(Math.random() * 2000);
+  const p = project({ app: { name: 'Tiny', url: `http://127.0.0.1:${port}`, start: 'node server.mjs' } });
+  const serve = (body: string) =>
+    writeFileSync(join(p.root, 'server.mjs'), `import http from 'node:http';\nhttp.createServer((q, s) => s.end(${JSON.stringify(body)})).listen(${port}, '127.0.0.1');\n`);
+  serve('old');
+  let app = await ensureApp(p);
+  try {
+    assert.equal(app.startedByGremlin, true);
+    assert.equal(await (await fetch(p.config.app.url)).text(), 'old');
+
+    serve('new');
+    app = await restartApp(p, app);
+    assert.equal(await (await fetch(p.config.app.url)).text(), 'new', 'Kane must see the changed code');
+
+    writeFileSync(join(p.root, 'server.mjs'), "throw new Error('boom: missing semicolon');\n");
+    await assert.rejects(restartApp(p, app), /exited with code 1[\s\S]*boom: missing semicolon/);
+    assert.equal(await isReachable(p.config.app.url, 500), false);
+  } finally {
+    app.stop();
+  }
+});

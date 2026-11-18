@@ -1,0 +1,65 @@
+{
+  "id": "BUG-005",
+  "title": "lowercase welcome coupon code (welcome10) is accepted and takes 10% off",
+  "origin": "capture",
+  "status": "fixed",
+  "severity": "high",
+  "confidence": 0.9,
+  "flowId": "regression/a-lowercase-welcome-coupon-code-welcome10-is-accepted-and-ta",
+  "tags": [
+    "checkout",
+    "coupon"
+  ],
+  "report": {
+    "source": "paste",
+    "text": "Hi Kiln team, I'm Priya Sharma ([redacted-email], [redacted-phone]). I typed welcome10 into the coupon box at checkout but it just says \"That coupon code is not valid\". The code from your welcome email should work!"
+  },
+  "failingStep": "Check the expected outcome",
+  "reason": "Checkpoint assertion failed: \"the message \"That coupon code is not valid.\" is not shown\"",
+  "verdict": {
+    "confirmed": true,
+    "family": "application_issue",
+    "category": "validation_defect",
+    "severity": "major",
+    "confidence": 0.9,
+    "title": "Welcome discount code is rejected as invalid",
+    "oneLiner": "The checkout rejects the expected 10% welcome coupon instead of applying its $2.80 discount.",
+    "rootCause": "The checkout treats the welcome coupon as invalid, so it shows an error and leaves the discount at $0.00 rather than applying the promised 10% reduction.",
+    "suggestion": "Check the configured welcome coupon and its validation rules, then ensure it displays the success message and changes the order summary discount to $2.80."
+  },
+  "runs": [
+    "RUN-20261118-170700-80b75b",
+    "RUN-20261118-171532-74d7a4",
+    "RUN-20261118-172106-e2064a",
+    "RUN-20261118-172728-378089",
+    "RUN-20261118-173641-fdb37e"
+  ],
+  "attempts": [
+    {
+      "n": 1,
+      "at": "2026-11-18T11:44:50.284Z",
+      "agent": "claude-code",
+      "promptFile": ".gremlin/bugs/BUG-005/attempt-1.md",
+      "changedFiles": [
+        "README.md",
+        "server.js"
+      ],
+      "outsideArea": [
+        "README.md"
+      ],
+      "blocked": [],
+      "result": "passed",
+      "durationS": 41.5,
+      "agentSummary": "I've fixed BUG-005 but haven't verified it: I couldn't get a Kane run or a manual check. `gremlin_verify_fix` and `gremlin_guard` were both refused for permission, and so was `curl` against localhost:4000. Gremlin's Stop hook will replay the flow with Kane when I finish, and that result is the real test.\n\n**Root cause:** `cartTotals` in `server.js` looked up `coupons[couponCode]` using exactly what the customer typed. Coupon keys are stored in uppercase (`WELCOME10`), so `welcome10`, or a code with a stray space, didn't match and got \"That coupon code is not valid.\"\n\n**Fix:** `cartTotals` (`server.js:35-37`) now trims the code and uppercases it before looking it up, and only accepts codes that really exist in the `coupons` table. Both the Apply button (`/api/coupon`) and placing an order (`/api/orders`) go through this function, so both now accept the code in any case. With one mug in the cart ($28.00), `welcome10` should now apply a $2.80 discount.\n\nThe app is started with plain `node server.js`, without the `--watch` option, so the server on port 4000 has to be restarted to run this change. If nothing restarts it before Kane's run, the flow will fail again even though the code is",
+      "runId": "RUN-20261118-171532-74d7a4",
+      "relatedRuns": [
+        "RUN-20261118-171630-6eeff1",
+        "RUN-20261118-171649-8e4215"
+      ]
+    }
+  ],
+  "createdAt": "2026-11-18T11:39:45.235Z",
+  "updatedAt": "2026-11-18T12:07:13.895Z",
+  "credits": 54.35,
+  "fixedAt": "2026-11-18T12:07:13.895Z"
+}

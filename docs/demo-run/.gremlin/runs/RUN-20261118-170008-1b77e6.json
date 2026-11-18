@@ -1,0 +1,171 @@
+{
+  "id": "RUN-20261118-170008-1b77e6",
+  "flowId": "adversarial/cart-pressing-back-and-forward-mid-flow",
+  "flowTitle": "Cart: pressing back and forward mid-flow",
+  "flowType": "adversarial",
+  "flowHash": "7040fe7a84b4c262",
+  "purpose": "breaker",
+  "job": "break-f85f9c",
+  "target": "http://localhost:4000/product/ash-glaze-mug",
+  "startedAt": "2026-11-18T11:30:08.941Z",
+  "status": "failed",
+  "credits": 36.34,
+  "kane": {
+    "status": "failed",
+    "exitCode": 1,
+    "steps": [
+      {
+        "index": 1,
+        "heading": "Step 1: Open any product and add it to the cart",
+        "status": "passed",
+        "actions": [
+          "Navigate to http://localhost:4000/product/ash-glaze-mug",
+          "Clicking Add to cart in the product details section"
+        ],
+        "replayed": false,
+        "summary": "added a product to the cart on localhost:4000",
+        "durationS": 21.6
+      },
+      {
+        "index": 2,
+        "heading": "Step 2: Fill in part of the form",
+        "status": "failed",
+        "actions": [
+          "Clicking View cart link",
+          "Clicking Checkout link"
+        ],
+        "replayed": false,
+        "summary": "The checkout page opened successfully, but the task did not specify any checkout field or value to enter.",
+        "reason": "Checkout fields are available, but the task provides no field or value to fill.",
+        "durationS": 27.7
+      }
+    ],
+    "credits": 22.32,
+    "durationS": 73.4,
+    "replayed": 0,
+    "authored": 4,
+    "healed": false,
+    "errors": [],
+    "logPath": ".gremlin/evidence/RUN-20261118-170008-1b77e6/kane.ndjson",
+    "sessionId": "2fd36933-22cb-4e5d-bc82-03a5f46efd5d",
+    "reason": "Checkout fields are available, but the task provides no field or value to fill.",
+    "oneLiner": "The checkout page opened successfully, but the task did not specify any checkout field or value to enter.",
+    "summary": "The test instructions are incomplete. They reach checkout but do not provide the form details needed for the next action.\nAdd the exact checkout fields and values the automation should enter, along with the expected completion condition.",
+    "verdict": {
+      "confirmed": false,
+      "family": "automation_bug",
+      "category": "config_issue",
+      "severity": "minor",
+      "confidence": 0.98,
+      "title": "Checkout task omits required form values",
+      "oneLiner": "The checkout page opened successfully, but the task did not specify any checkout field or value to enter.",
+      "rootCause": "The test instructions are incomplete. They reach checkout but do not provide the form details needed for the next action.",
+      "suggestion": "Add the exact checkout fields and values the automation should enter, along with the expected completion condition."
+    },
+    "failedStep": {
+      "index": 2,
+      "heading": "Step 2: Fill in part of the form",
+      "status": "failed",
+      "actions": [
+        "Clicking View cart link",
+        "Clicking Checkout link"
+      ],
+      "replayed": false,
+      "summary": "The checkout page opened successfully, but the task did not specify any checkout field or value to enter.",
+      "reason": "Checkout fields are available, but the task provides no field or value to fill.",
+      "durationS": 27.7
+    },
+    "shareUrl": "https://test-manager.lambdatest.com/projects/01M7Q1C971BFK2HDPEYWC1WGRX/test-cases/01M7Q6QSJT34E4V802APRRNXGH/dashboard/share/US_V0OXXJQF4H58SLGAH2YRI093IW1H7QS2SCTYXDB2BTAFACTQU7T021KBVAC5JGOL?type=summary&agentView=true&fqdn=summary-page",
+    "evidencePack": "~/.testmuai/kaneai/sessions/2fd36933-22cb-4e5d-bc82-03a5f46efd5d/evidence/cfc07e17-0ce7-4bb1-aa60-0aa96362be72.evidence"
+  },
+  "retry": {
+    "status": "failed",
+    "credits": 14.02,
+    "logPath": ".gremlin/evidence/RUN-20261118-170008-1b77e6/kane-retry.ndjson",
+    "evidencePack": "~/.testmuai/kaneai/sessions/6ccd4a3a-5190-423a-ba1b-060b1cef4a57/evidence/f9030573-ed83-44ed-96ef-95d5cd9a152d.evidence"
+  },
+  "evidence": {
+    "pack": "~/.testmuai/kaneai/sessions/2fd36933-22cb-4e5d-bc82-03a5f46efd5d/evidence/cfc07e17-0ce7-4bb1-aa60-0aa96362be72.evidence",
+    "consoleErrors": [
+      "Failed to load resource: the server responded with a status of 404 (Not Found)"
+    ],
+    "networkFailures": [],
+    "steps": [
+      {
+        "ordinal": 1,
+        "id": "0-1",
+        "kind": "navigate",
+        "status": "passed",
+        "summary": "navigate: Navigate to http://localhost:4000/product/ash-glaze-mug",
+        "url": "http://localhost:4000/product/ash-glaze-mug",
+        "screenshot": "step-1-0-1.jpg"
+      },
+      {
+        "ordinal": 2,
+        "id": "0-2",
+        "kind": "click",
+        "status": "passed",
+        "summary": "click: Clicking Add to cart in the product details section",
+        "url": "http://localhost:4000/product/ash-glaze-mug",
+        "screenshot": "step-2-0-2.png"
+      },
+      {
+        "ordinal": 3,
+        "id": "0-3",
+        "kind": "",
+        "status": "passed",
+        "summary": "wait: Waiting confirm the product has been added to the cart",
+        "url": "http://localhost:4000/product/ash-glaze-mug",
+        "screenshot": "step-3-0-3.jpg"
+      },
+      {
+        "ordinal": 4,
+        "id": "1-1",
+        "kind": "click",
+        "status": "passed",
+        "summary": "click: Clicking View cart link",
+        "url": "http://localhost:4000/product/ash-glaze-mug",
+        "screenshot": "step-4-1-1.png"
+      },
+      {
+        "ordinal": 5,
+        "id": "1-2",
+        "kind": "click",
+        "status": "passed",
+        "summary": "click: Clicking Checkout link",
+        "url": "http://localhost:4000/cart",
+        "screenshot": "step-5-1-2.png"
+      },
+      {
+        "ordinal": 6,
+        "id": "1-3",
+        "kind": "",
+        "status": "failed",
+        "summary": "wait: Waiting while form instructions are unavailable",
+        "url": "http://localhost:4000/checkout",
+        "screenshot": "step-6-1-3.jpg"
+      }
+    ],
+    "screenshots": [
+      "step-1-0-1.jpg",
+      "step-2-0-2.png",
+      "step-3-0-3.jpg",
+      "step-4-1-1.png",
+      "step-5-1-2.png",
+      "step-6-1-3.jpg"
+    ],
+    "failure": {
+      "step": "1-2",
+      "message": "Checkout fields are available, but the task provides no field or value to fill.",
+      "pageUrl": "http://localhost:4000/checkout",
+      "title": "Checkout task omits required form values",
+      "rootCause": "The test instructions are incomplete. They reach checkout but do not provide the form details needed for the next action.",
+      "category": "automation_bug/config_issue",
+      "confidence": 0.98,
+      "severity": "minor",
+      "suggestedFix": "Add the exact checkout fields and values the automation should enter, along with the expected completion condition.",
+      "screenshot": "step-5-1-2.png"
+    }
+  },
+  "endedAt": "2026-11-18T11:32:18.248Z"
+}

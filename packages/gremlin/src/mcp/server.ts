@@ -142,7 +142,9 @@ export async function startMcp(): Promise<void> {
     async ({ areas, max }) => {
       const p = project();
       const r = await runBreaker(p, { areas, max });
-      const lines = r.findings.map((f) => `- ${f.outcome === 'bug' ? `${f.bug!.id} [${f.bug!.severity}]` : f.outcome}: ${f.flow.title}`);
+      const lines = r.findings.map(
+        (f) => `- ${f.outcome === 'bug' ? `${f.bug!.id} [${f.bug!.severity}]` : f.outcome === 'duplicate' ? `same bug as ${f.bug!.id}` : f.outcome}: ${f.flow.title}`,
+      );
       return text(`${r.findings.filter((f) => f.outcome === 'bug').length} bugs from ${r.findings.length} attacks (${Math.round(r.credits)} credits)\n${lines.join('\n')}`);
     },
   );

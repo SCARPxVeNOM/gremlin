@@ -11,7 +11,8 @@ import { ensureDir } from './paths.ts';
 import { describeRun, runFlow, silentReporter, type Reporter } from './runner.ts';
 import { changedSince, diffStat, restoreGuarded, revertFiles, takeSnapshot } from './snapshot.ts';
 import { emit, getBug, getRun, lockFlow, saveBug, type BugRecord, type FixAttempt, type RunRecord } from './store.ts';
-import { ensureApp } from './target.ts';
+import { onInterrupt } from './interrupt.ts';
+import { ensureApp, restartApp } from './target.ts';
 import { nowIso, round } from './util.ts';
 
 export type LoopMode = 'suggest' | 'approve' | 'autonomous';
@@ -91,11 +92,19 @@ export async function runFixer(project: Project, bugId: string, opts: FixOptions
     }
   }
 
-  const app = await ensureApp(project, reporter.info);
+  let app = await ensureApp(project, reporter.info);
   const isGuarded = protectedMatcher(project);
   const areaGlobs = flow.tags.flatMap((t) => config.guard.areas[t] ?? []);
   const inArea = areaGlobs.length ? picomatch(areaGlobs, { dot: true }) : () => true;
 
+  // an attempt left pending by an earlier run that was stopped never finished: it doesn't count
+  bug.attempts = bug.attempts.filter((a) => a.result !== 'pending');
+  const statusBefore = bug.status === 'fixing' ? 'confirmed' : bug.status;
+  const releaseBug = onInterrupt(() => {
+    bug.attempts = bug.attempts.filter((a) => a.result !== 'pending');
+    bug.status = statusBefore;
+    saveBug(paths, bug);
+  });
   try {
     bug.status = 'fixing';
     saveBug(paths, bug);
@@ -160,6 +169,17 @@ export async function runFixer(project: Project, bugId: string, opts: FixOptions
       if (stat) writeFileSync(join(bugDir, `attempt-${n}.diffstat.txt`), stat + '\n');
 
       // Kane decides. The agent's word doesn't count.
+      try {
+        app = await restartApp(project, app, (m) => reporter.info(`   ${m}`));
+      } catch (err) {
+        // the change broke startup: that's this attempt's evidence
+        attempt.result = 'failed';
+        attempt.appError = (err as Error).message.slice(0, 1500);
+        saveBug(paths, bug);
+        reporter.warn(`   ✗ the app didn't start after the change: ${attempt.appError.split('\n')[0]}`);
+        emit(paths, 'bug', `${bug.id}: attempt ${n} broke the app's startup`, { bugId: bug.id, attempt: n }, job.id);
+        continue;
+      }
       reporter.info('   Kane is re-running the failing flow in a real browser …');
       const verify = await runFlow(project, flow, { purpose: 'fix', job: job.id, bugId: bug.id, attempt: n, reporter });
       attempt.runId = verify.id;
@@ -253,11 +273,11 @@ export async function runFixer(project: Project, bugId: string, opts: FixOptions
     endJob(paths, job, 'error', (err as Error).message);
     throw err;
   } finally {
+    releaseBug();
     app.stop();
   }
 }
 
-/** Active flows that share a tag with the bug's flow: the ones most likely to show a side effect. */
 /** Other repros of the same bug come first (they must pass too), then active flows in the same area. */
 export function relatedFlows(project: Project, flow: Flow, limit = 4, bugId?: string): Flow[] {
   const all = listFlows(project.paths).filter((f) => f.id !== flow.id && f.status !== 'retired');

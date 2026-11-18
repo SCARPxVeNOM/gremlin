@@ -1,0 +1,133 @@
+{
+  "pack": "~/.testmuai/kaneai/sessions/b70b644d-721f-4128-8a9d-f5be0ce21403/evidence/ea3ecae5-f927-4a62-a04a-242d9af85491.evidence",
+  "consoleErrors": [
+    "Failed to load resource: the server responded with a status of 404 (Not Found)"
+  ],
+  "networkFailures": [],
+  "steps": [
+    {
+      "ordinal": 1,
+      "id": "0-1",
+      "kind": "navigate",
+      "status": "passed",
+      "summary": "navigate: Navigate to http://localhost:4000/product/ash-glaze-mug",
+      "url": "http://localhost:4000/product/ash-glaze-mug",
+      "screenshot": "step-1-0-1.jpg"
+    },
+    {
+      "ordinal": 2,
+      "id": "0-2",
+      "kind": "click",
+      "status": "passed",
+      "summary": "click: Clicking Add to cart for Ash Glaze Mug",
+      "url": "http://localhost:4000/product/ash-glaze-mug",
+      "screenshot": "step-2-0-2.png"
+    },
+    {
+      "ordinal": 3,
+      "id": "0-3",
+      "kind": "",
+      "status": "passed",
+      "summary": "wait: Waiting after confirming the cart quantity is 1",
+      "url": "http://localhost:4000/product/ash-glaze-mug",
+      "screenshot": "step-3-0-3.jpg"
+    },
+    {
+      "ordinal": 4,
+      "id": "1-1",
+      "kind": "click",
+      "status": "passed",
+      "summary": "click: Clicking View cart",
+      "url": "http://localhost:4000/product/ash-glaze-mug",
+      "screenshot": "step-4-1-1.png"
+    },
+    {
+      "ordinal": 5,
+      "id": "2-1",
+      "kind": "click",
+      "status": "passed",
+      "summary": "click: Clicking Checkout link",
+      "url": "http://localhost:4000/cart",
+      "screenshot": "step-5-2-1.png"
+    },
+    {
+      "ordinal": 6,
+      "id": "2-2",
+      "kind": "wait",
+      "status": "passed",
+      "summary": "wait: queued plan (2 steps): type \"Coupon code\"; click \"Apply\"",
+      "url": "http://localhost:4000/checkout",
+      "screenshot": "step-6-2-2.jpg"
+    },
+    {
+      "ordinal": 7,
+      "id": "2-3",
+      "kind": "type",
+      "status": "passed",
+      "summary": "type: Type \"welcome10\" into \"Coupon code\"",
+      "url": "http://localhost:4000/checkout",
+      "screenshot": "step-7-2-3.png"
+    },
+    {
+      "ordinal": 8,
+      "id": "2-4",
+      "kind": "click",
+      "status": "passed",
+      "summary": "click: Click \"Apply\"",
+      "url": "http://localhost:4000/checkout",
+      "screenshot": "step-8-2-4.png"
+    },
+    {
+      "ordinal": 9,
+      "id": "2-5",
+      "kind": "",
+      "status": "passed",
+      "summary": "wait: Waiting after applying the coupon code",
+      "url": "http://localhost:4000/checkout",
+      "screenshot": "step-9-2-5.jpg"
+    },
+    {
+      "ordinal": 10,
+      "id": "3-1",
+      "kind": "analyze",
+      "status": "passed",
+      "summary": "analyze: A message says the 10% welcome discount was applied",
+      "url": "http://localhost:4000/checkout",
+      "screenshot": "step-10-3-1.jpg"
+    },
+    {
+      "ordinal": 11,
+      "id": "3-2",
+      "kind": "assert",
+      "status": "failed",
+      "summary": "assert: the message \"That coupon code is not valid.\" is not shown",
+      "url": "http://localhost:4000/checkout",
+      "screenshot": "step-11-3-2.jpg"
+    }
+  ],
+  "screenshots": [
+    "step-1-0-1.jpg",
+    "step-2-0-2.png",
+    "step-3-0-3.jpg",
+    "step-4-1-1.png",
+    "step-5-2-1.png",
+    "step-6-2-2.jpg",
+    "step-7-2-3.png",
+    "step-8-2-4.png",
+    "step-9-2-5.jpg",
+    "step-10-3-1.jpg",
+    "step-11-3-2.jpg"
+  ],
+  "failure": {
+    "step": "3-2",
+    "message": "Checkpoint assertion failed: \"the message \"That coupon code is not valid.\" is not shown\"",
+    "pageUrl": "http://localhost:4000/checkout",
+    "title": "Welcome discount code is rejected as invalid",
+    "rootCause": "The checkout treats the welcome coupon as invalid, so it shows an error and leaves the discount at $0.00 rather than applying the promised 10% reduction.",
+    "category": "application_issue/validation_defect",
+    "confidence": 0.9,
+    "severity": "major",
+    "suggestedFix": "Check the configured welcome coupon and its validation rules, then ensure it displays the success message and changes the order summary discount to $2.80.",
+    "screenshot": "step-11-3-2.jpg"
+  }
+}

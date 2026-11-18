@@ -163,6 +163,11 @@ program
       if (bugs.length) table(bugs.map((f) => bugLine(f.bug!)), ['id', 'severity', 'status', 'conf', 'origin', 'title']);
       const dupes = r.findings.filter((f) => f.outcome === 'duplicate');
       if (dupes.length) console.log(g.dim(`${dupes.length} more attack${dupes.length === 1 ? '' : 's'} reproduced a bug already found (${[...new Set(dupes.map((f) => f.bug!.id))].join(', ')}).`));
+      for (const f of r.findings.filter((f) => f.outcome === 'disputed')) {
+        console.log(g.warn(`Disputed: ${f.flow.title}`));
+        console.log(g.dim(`  Kane blamed the flow; the agent says: ${f.dispute}`));
+        console.log(g.dim(`  You decide: \`gremlin flows approve ${f.flow.id}\` to keep it as a test, or retire it.`));
+      }
       const held = r.findings.filter((f) => f.outcome === 'held').length;
       if (held) console.log(g.dim(`${held} attack${held === 1 ? '' : 's'} held: saved as adversarial guards.`));
       if (r.reportPath) console.log(g.dim(`Report: ${relative(pr.root, r.reportPath)}`));

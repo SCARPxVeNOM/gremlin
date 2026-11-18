@@ -1,0 +1,273 @@
+{
+  "id": "RUN-20261118-172106-e2064a",
+  "flowId": "regression/a-lowercase-welcome-coupon-code-welcome10-is-accepted-and-ta",
+  "flowTitle": "A lowercase welcome coupon code (welcome10) is accepted and takes 10% off",
+  "flowType": "regression",
+  "flowHash": "59e33b170d9dd415",
+  "purpose": "guard",
+  "job": "guard-17a490",
+  "target": "http://localhost:4000/product/ash-glaze-mug",
+  "startedAt": "2026-11-18T11:51:06.674Z",
+  "status": "failed",
+  "credits": 15.55,
+  "kane": {
+    "status": "failed",
+    "exitCode": 1,
+    "steps": [
+      {
+        "index": 1,
+        "heading": "Step 1: Click Add to cart",
+        "status": "passed",
+        "actions": [
+          "Navigate to http://localhost:4000/product/ash-glaze-mug",
+          "Clicking Add to cart for Ash Glaze Mug"
+        ],
+        "replayed": true,
+        "durationS": 1.23
+      },
+      {
+        "index": 2,
+        "heading": "Step 2: Go to the checkout page",
+        "status": "passed",
+        "actions": [
+          "Clicking View cart"
+        ],
+        "replayed": true,
+        "durationS": 0.74
+      },
+      {
+        "index": 3,
+        "heading": "Step 3: Type welcome10 (all lowercase) into the Coupon code field and c…",
+        "status": "passed",
+        "actions": [
+          "Clicking Checkout link",
+          "Waiting for the coupon code to be applied",
+          "Type \"welcome10\" into \"Coupon code\"",
+          "Click \"Apply\""
+        ],
+        "replayed": true,
+        "durationS": 2.62
+      },
+      {
+        "index": 4,
+        "heading": "Check the expected outcome",
+        "status": "failed",
+        "actions": [
+          "Checking whether the invalid coupon message is present",
+          "Checking whether the welcome discount message is present",
+          "Reading the discount from the order summary",
+          "assert ✗ the message \"That coupon code is not valid.\" is not shown"
+        ],
+        "replayed": true,
+        "reason": "assertion_failed: @ step 4",
+        "durationS": 35.85
+      },
+      {
+        "index": 1,
+        "heading": "Step 1: Click Add to cart",
+        "status": "passed",
+        "actions": [
+          "Navigate to http://localhost:4000/product/ash-glaze-mug",
+          "Clicking Add to cart for Ash Glaze Mug"
+        ],
+        "replayed": true,
+        "durationS": 1.23
+      },
+      {
+        "index": 2,
+        "heading": "Step 2: Go to the checkout page",
+        "status": "passed",
+        "actions": [
+          "Clicking View cart"
+        ],
+        "replayed": true,
+        "durationS": 0.68
+      },
+      {
+        "index": 3,
+        "heading": "Step 3: Type welcome10 (all lowercase) into the Coupon code field and c…",
+        "status": "passed",
+        "actions": [
+          "Clicking Checkout link",
+          "Waiting for the coupon code to be applied",
+          "Type \"welcome10\" into \"Coupon code\"",
+          "Click \"Apply\""
+        ],
+        "replayed": true,
+        "durationS": 2.57
+      },
+      {
+        "index": 4,
+        "heading": "Check the expected outcome",
+        "status": "failed",
+        "actions": [
+          "Checking whether the invalid coupon message is present",
+          "Checking whether the welcome discount message is present",
+          "Reading the discount from the order summary",
+          "assert ✗ the message \"That coupon code is not valid.\" is not shown"
+        ],
+        "replayed": false,
+        "summary": "Checkout rejects the welcome discount code instead of applying the expected 10% discount.",
+        "reason": "Checkpoint assertion failed: \"the message \"That coupon code is not valid.\" is not shown\"",
+        "durationS": 30.4
+      }
+    ],
+    "credits": 7.59,
+    "durationS": 98.9,
+    "replayed": 4,
+    "authored": 0,
+    "healed": true,
+    "errors": [],
+    "logPath": ".gremlin/evidence/RUN-20261118-172106-e2064a/kane.ndjson",
+    "reason": "Checkpoint assertion failed: \"the message \"That coupon code is not valid.\" is not shown\"",
+    "oneLiner": "Checkout rejects the welcome discount code instead of applying the expected 10% discount.",
+    "summary": "The checkout treated the welcome coupon as invalid, so it did not show the welcome-discount message or apply the expected $2.80 discount.\nCheck the checkout coupon rules and welcome-code configuration so the intended welcome code is accepted and applies 10% off.\nevidence: error_ui_text: That coupon code is not valid.\nevidence: objective_contradiction: analyze: the order summary shows a discount of $2.80",
+    "verdict": {
+      "confirmed": true,
+      "family": "application_issue",
+      "category": "validation_defect",
+      "severity": "major",
+      "confidence": 0.97,
+      "title": "Welcome discount code is rejected at checkout",
+      "oneLiner": "Checkout rejects the welcome discount code instead of applying the expected 10% discount.",
+      "rootCause": "The checkout treated the welcome coupon as invalid, so it did not show the welcome-discount message or apply the expected $2.80 discount.",
+      "suggestion": "Check the checkout coupon rules and welcome-code configuration so the intended welcome code is accepted and applies 10% off."
+    },
+    "failedStep": {
+      "index": 4,
+      "heading": "Check the expected outcome",
+      "status": "failed",
+      "actions": [
+        "Checking whether the invalid coupon message is present",
+        "Checking whether the welcome discount message is present",
+        "Reading the discount from the order summary",
+        "assert ✗ the message \"That coupon code is not valid.\" is not shown"
+      ],
+      "replayed": true,
+      "reason": "assertion_failed: @ step 4",
+      "durationS": 35.85
+    },
+    "sessionId": "7cf89162-f710-416f-97dd-4163bd0af3d1",
+    "evidencePack": "~/.testmuai/kaneai/sessions/7cf89162-f710-416f-97dd-4163bd0af3d1/evidence/aef53116-444e-4180-9e42-3b8d51c822e1.evidence"
+  },
+  "retry": {
+    "status": "failed",
+    "credits": 7.96,
+    "logPath": ".gremlin/evidence/RUN-20261118-172106-e2064a/kane-retry.ndjson",
+    "evidencePack": "~/.testmuai/kaneai/sessions/04875a29-ede3-4934-9023-eae0aefb3c2b/evidence/e7968c31-5060-4b21-8538-5c59e1144cec.evidence"
+  },
+  "evidence": {
+    "pack": "~/.testmuai/kaneai/sessions/7cf89162-f710-416f-97dd-4163bd0af3d1/evidence/aef53116-444e-4180-9e42-3b8d51c822e1.evidence",
+    "consoleErrors": [
+      "Failed to load resource: the server responded with a status of 404 (Not Found)"
+    ],
+    "networkFailures": [],
+    "steps": [
+      {
+        "ordinal": 1,
+        "id": "0-1",
+        "kind": "navigate",
+        "status": "passed",
+        "summary": "navigate: Navigate to http://localhost:4000/product/ash-glaze-mug",
+        "url": "https://kaneai-playground.lambdatest.io/",
+        "screenshot": "step-1-0-1.jpg"
+      },
+      {
+        "ordinal": 2,
+        "id": "0-2",
+        "kind": "click",
+        "status": "passed",
+        "summary": "click: Clicking Add to cart for Ash Glaze Mug",
+        "url": "http://localhost:4000/product/ash-glaze-mug",
+        "screenshot": "step-2-0-2.png"
+      },
+      {
+        "ordinal": 3,
+        "id": "1-1",
+        "kind": "click",
+        "status": "passed",
+        "summary": "click: Clicking View cart",
+        "url": "http://localhost:4000/product/ash-glaze-mug",
+        "screenshot": "step-3-1-1.png"
+      },
+      {
+        "ordinal": 4,
+        "id": "2-1",
+        "kind": "click",
+        "status": "passed",
+        "summary": "click: Clicking Checkout link",
+        "url": "http://localhost:4000/cart",
+        "screenshot": "step-4-2-1.png"
+      },
+      {
+        "ordinal": 5,
+        "id": "2-2",
+        "kind": "wait",
+        "status": "passed",
+        "summary": "wait: Waiting for the coupon code to be applied",
+        "url": "http://localhost:4000/checkout",
+        "screenshot": "step-5-2-2.jpg"
+      },
+      {
+        "ordinal": 6,
+        "id": "2-3",
+        "kind": "fill",
+        "status": "passed",
+        "summary": "fill: Type \"welcome10\" into \"Coupon code\"",
+        "url": "http://localhost:4000/checkout",
+        "screenshot": "step-6-2-3.png"
+      },
+      {
+        "ordinal": 7,
+        "id": "2-4",
+        "kind": "click",
+        "status": "passed",
+        "summary": "click: Click \"Apply\"",
+        "url": "http://localhost:4000/checkout",
+        "screenshot": "step-7-2-4.png"
+      },
+      {
+        "ordinal": 8,
+        "id": "3-1",
+        "kind": "analyze",
+        "status": "passed",
+        "summary": "analyze: the order summary shows a discount of $2.80",
+        "url": "http://localhost:4000/checkout",
+        "screenshot": "step-8-3-1.jpg"
+      },
+      {
+        "ordinal": 9,
+        "id": "3-2",
+        "kind": "assert",
+        "status": "failed",
+        "summary": "assert: the message \"That coupon code is not valid.\" is not shown",
+        "url": "http://localhost:4000/checkout",
+        "screenshot": "step-9-3-2.jpg"
+      }
+    ],
+    "screenshots": [
+      "step-1-0-1.jpg",
+      "step-2-0-2.png",
+      "step-3-1-1.png",
+      "step-4-2-1.png",
+      "step-5-2-2.jpg",
+      "step-6-2-3.png",
+      "step-7-2-4.png",
+      "step-8-3-1.jpg",
+      "step-9-3-2.jpg"
+    ],
+    "failure": {
+      "step": "3-2",
+      "message": "Checkpoint assertion failed: \"the message \"That coupon code is not valid.\" is not shown\"",
+      "pageUrl": "http://localhost:4000/checkout",
+      "title": "Welcome discount code is rejected at checkout",
+      "rootCause": "The checkout treated the welcome coupon as invalid, so it did not show the welcome-discount message or apply the expected $2.80 discount.",
+      "category": "application_issue/validation_defect",
+      "confidence": 0.97,
+      "severity": "major",
+      "suggestedFix": "Check the checkout coupon rules and welcome-code configuration so the intended welcome code is accepted and applies 10% off.",
+      "screenshot": "step-9-3-2.jpg"
+    }
+  },
+  "endedAt": "2026-11-18T11:53:38.072Z"
+}

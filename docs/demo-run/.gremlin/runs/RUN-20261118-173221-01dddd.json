@@ -1,0 +1,201 @@
+{
+  "id": "RUN-20261118-173221-01dddd",
+  "flowId": "regression/a-lowercase-welcome-coupon-code-welcome10-is-accepted-and-ta",
+  "flowTitle": "A lowercase welcome coupon code (welcome10) is accepted and takes 10% off",
+  "flowType": "regression",
+  "flowHash": "59e33b170d9dd415",
+  "purpose": "guard",
+  "job": "guard-fa339a",
+  "target": "http://localhost:4000/product/ash-glaze-mug",
+  "startedAt": "2026-11-18T12:02:21.155Z",
+  "status": "passed",
+  "credits": 6.98,
+  "kane": {
+    "status": "passed",
+    "exitCode": 0,
+    "steps": [
+      {
+        "index": 1,
+        "heading": "Step 1: Click Add to cart",
+        "status": "passed",
+        "actions": [
+          "Navigate to http://localhost:4000/product/ash-glaze-mug",
+          "Clicking Add to cart for Ash Glaze Mug"
+        ],
+        "replayed": true,
+        "durationS": 1.25
+      },
+      {
+        "index": 2,
+        "heading": "Step 2: Go to the checkout page",
+        "status": "passed",
+        "actions": [
+          "Clicking View cart"
+        ],
+        "replayed": true,
+        "durationS": 0.69
+      },
+      {
+        "index": 3,
+        "heading": "Step 3: Type welcome10 (all lowercase) into the Coupon code field and c…",
+        "status": "passed",
+        "actions": [
+          "Clicking Checkout link",
+          "Waiting for the coupon code to be applied",
+          "Type \"welcome10\" into \"Coupon code\"",
+          "Click \"Apply\""
+        ],
+        "replayed": true,
+        "durationS": 2.58
+      },
+      {
+        "index": 4,
+        "heading": "Check the expected outcome",
+        "status": "passed",
+        "actions": [
+          "Checking whether the invalid coupon message is present",
+          "Checking whether the welcome discount message is present",
+          "Reading the discount from the order summary",
+          "assert ✓ the message \"That coupon code is not valid.\" is not shown",
+          "assert ✓ A message says the 10% welcome discount was applied",
+          "assert ✓ the order summary shows a discount of $2.80"
+        ],
+        "replayed": false,
+        "summary": "confirmed the welcome discount on the checkout page",
+        "durationS": 25.7
+      }
+    ],
+    "credits": 6.98,
+    "durationS": 53,
+    "replayed": 3,
+    "authored": 1,
+    "healed": false,
+    "errors": [],
+    "logPath": ".gremlin/evidence/RUN-20261118-173221-01dddd/kane.ndjson",
+    "sessionId": "e33d2f39-6a49-4e5b-aeea-a190434e5c7e",
+    "shareUrl": "https://test-manager.lambdatest.com/projects/01M7Q1C971BFK2HDPEYWC1WGRX/test-cases/01M7Q74BQFSBJSX2QSMRVN60QG/dashboard/share/US_IASFCZUDOTCKPXLCE1X0IUW9UR5757IW9EEBMZ9IRXPYU3E5GKOXNVYMNITRKKT2?type=summary&agentView=true&fqdn=summary-page",
+    "evidencePack": "~/.testmuai/kaneai/sessions/e33d2f39-6a49-4e5b-aeea-a190434e5c7e/evidence/b133a6dc-a546-4260-b23e-b8fdc7b65d96.evidence"
+  },
+  "evidence": {
+    "pack": "~/.testmuai/kaneai/sessions/e33d2f39-6a49-4e5b-aeea-a190434e5c7e/evidence/b133a6dc-a546-4260-b23e-b8fdc7b65d96.evidence",
+    "consoleErrors": [
+      "Failed to load resource: the server responded with a status of 404 (Not Found)"
+    ],
+    "networkFailures": [],
+    "steps": [
+      {
+        "ordinal": 1,
+        "id": "0-1",
+        "kind": "navigate",
+        "status": "passed",
+        "summary": "navigate: Navigate to http://localhost:4000/product/ash-glaze-mug",
+        "url": "https://kaneai-playground.lambdatest.io/",
+        "screenshot": "step-1-0-1.jpg"
+      },
+      {
+        "ordinal": 2,
+        "id": "0-2",
+        "kind": "click",
+        "status": "passed",
+        "summary": "click: Clicking Add to cart for Ash Glaze Mug",
+        "url": "http://localhost:4000/product/ash-glaze-mug",
+        "screenshot": "step-2-0-2.png"
+      },
+      {
+        "ordinal": 3,
+        "id": "1-1",
+        "kind": "click",
+        "status": "passed",
+        "summary": "click: Clicking View cart",
+        "url": "http://localhost:4000/product/ash-glaze-mug",
+        "screenshot": "step-3-1-1.png"
+      },
+      {
+        "ordinal": 4,
+        "id": "2-1",
+        "kind": "click",
+        "status": "passed",
+        "summary": "click: Clicking Checkout link",
+        "url": "http://localhost:4000/cart",
+        "screenshot": "step-4-2-1.png"
+      },
+      {
+        "ordinal": 5,
+        "id": "2-2",
+        "kind": "wait",
+        "status": "passed",
+        "summary": "wait: Waiting for the coupon code to be applied",
+        "url": "http://localhost:4000/checkout",
+        "screenshot": "step-5-2-2.jpg"
+      },
+      {
+        "ordinal": 6,
+        "id": "2-3",
+        "kind": "fill",
+        "status": "passed",
+        "summary": "fill: Type \"welcome10\" into \"Coupon code\"",
+        "url": "http://localhost:4000/checkout",
+        "screenshot": "step-6-2-3.png"
+      },
+      {
+        "ordinal": 7,
+        "id": "2-4",
+        "kind": "click",
+        "status": "passed",
+        "summary": "click: Click \"Apply\"",
+        "url": "http://localhost:4000/checkout",
+        "screenshot": "step-7-2-4.png"
+      },
+      {
+        "ordinal": 8,
+        "id": "3-1",
+        "kind": "analyze",
+        "status": "passed",
+        "summary": "analyze: the order summary shows a discount of $2.80",
+        "url": "http://localhost:4000/checkout",
+        "screenshot": "step-8-3-1.jpg"
+      },
+      {
+        "ordinal": 9,
+        "id": "3-2",
+        "kind": "assert",
+        "status": "passed",
+        "summary": "assert: the message \"That coupon code is not valid.\" is not shown",
+        "url": "http://localhost:4000/checkout",
+        "screenshot": "step-9-3-2.jpg"
+      },
+      {
+        "ordinal": 10,
+        "id": "3-3",
+        "kind": "assert",
+        "status": "passed",
+        "summary": "assert: A message says the 10% welcome discount was applied",
+        "url": "http://localhost:4000/checkout",
+        "screenshot": "step-10-3-3.jpg"
+      },
+      {
+        "ordinal": 11,
+        "id": "3-4",
+        "kind": "assert",
+        "status": "passed",
+        "summary": "assert: the order summary shows a discount of $2.80",
+        "url": "http://localhost:4000/checkout",
+        "screenshot": "step-11-3-4.jpg"
+      }
+    ],
+    "screenshots": [
+      "step-1-0-1.jpg",
+      "step-2-0-2.png",
+      "step-3-1-1.png",
+      "step-4-2-1.png",
+      "step-5-2-2.jpg",
+      "step-6-2-3.png",
+      "step-7-2-4.png",
+      "step-8-3-1.jpg",
+      "step-9-3-2.jpg",
+      "step-10-3-3.jpg",
+      "step-11-3-4.jpg"
+    ]
+  },
+  "endedAt": "2026-11-18T12:03:14.209Z"
+}

@@ -141,12 +141,14 @@ export async function runCapture(project: Project, input: BugReportInput, opts: 
     reporter.info('\nFail-first check: Kane must reproduce the bug before it is accepted …');
     let run = await runFlow(project, flow, { purpose: 'capture', job: job.id, reporter });
     reporter.info(`  → ${describeRun(run)}`);
+    let dispute: string | undefined;
     if (shouldRevise(flow, run)) {
       reporter.info('  Kane blamed the repro, not the product: asking the agent to revise it once …');
-      const revised = await reviseFlow(project, flow, run, job.id);
-      if (revised) {
-        flow = revised;
-        revised.steps.forEach((s, i) => reporter.info(`    ${i + 1}. ${s}`));
+      const revision = await reviseFlow(project, flow, run, job.id);
+      if (revision) {
+        flow = revision.flow;
+        dispute = revision.dispute;
+        flow.steps.forEach((s, i) => reporter.info(`    ${i + 1}. ${s}`));
         run = await runFlow(project, flow, { purpose: 'capture', job: job.id, reporter });
         reporter.info(`  → ${describeRun(run)}`);
       }
@@ -225,6 +227,10 @@ export async function runCapture(project: Project, input: BugReportInput, opts: 
     } else if (run.status === 'failed') {
       outcome = 'inconclusive';
       message = `Inconclusive: Kane judged the failure to be the repro's fault, not the product's (${run.kane?.verdict?.oneLiner ?? 'automation issue'}).`;
+      if (dispute) {
+        message += ` The agent disagrees: ${dispute}`;
+        bug.questions = [`Kane and the agent disagree. Kane: ${run.kane?.verdict?.oneLiner ?? 'the repro is at fault'}. Agent: ${dispute} Which is right?`];
+      }
     } else if (run.status === 'error') {
       outcome = 'error';
       message = `Kane couldn't run the repro: ${run.kane?.errors[0] ?? 'unknown error'}`;
