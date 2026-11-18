@@ -1,0 +1,52 @@
+{
+  "name": "gremlin-qa",
+  "version": "0.1.0",
+  "description": "A drop-in QA loop: a hostile user that attacks your app, bug reports that become tests, your own coding agent as the fixer, and Kane CLI as the referee.",
+  "type": "module",
+  "license": "MIT",
+  "bin": {
+    "gremlin": "dist/cli.js"
+  },
+  "files": [
+    "dist",
+    "templates"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "typecheck": "tsc --noEmit",
+    "test": "node --test --experimental-strip-types test/*.test.ts"
+  },
+  "keywords": [
+    "qa",
+    "testing",
+    "kane-cli",
+    "ai-agents",
+    "claude-code",
+    "mcp",
+    "e2e"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/SCARPxVeNOM/gremlin.git"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "@clack/prompts": "^1.9.0",
+    "@modelcontextprotocol/sdk": "^1.32.2",
+    "commander": "^14.0.3",
+    "fflate": "^0.8.3",
+    "picocolors": "^1.1.1",
+    "picomatch": "^4.0.7",
+    "yaml": "^2.9.1",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.6",
+    "@types/picomatch": "^4.0.3",
+    "tsup": "^9.0.0",
+    "typescript": "^5.9.3"
+  }
+}

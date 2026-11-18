@@ -1,0 +1,238 @@
+<p align="center">
+  <img src="docs/assets/logo.svg" width="64" height="64" alt="">
+</p>
+
+<h1 align="center">Gremlin</h1>
+
+<p align="center">
+  A drop-in QA loop for any product.<br>
+  One agent attacks your app like a hostile user, every bug report becomes a test,<br>
+  your own coding agent fixes what breaks, and <strong>Kane CLI</strong> proves each fix in a real browser.
+</p>
+
+<p align="center">
+  <a href="#quickstart">Quickstart</a> ·
+  <a href="#try-it-on-kiln">Try it on the demo shop</a> ·
+  <a href="#how-the-loop-closes">How the loop closes</a> ·
+  <a href="#commands">Commands</a> ·
+  <a href="docs/SPEC.md">Spec</a>
+</p>
+
+---
+
+AI coding agents declare work "done" without proof that a real user can finish the flow. Gremlin makes that proof
+mandatory. It never decides on its own whether something works: **every pass and every fail in Gremlin is a Kane CLI
+run** in a real browser, with an evidence pack behind it.
+
+```
+             ┌──────────── Breaker: hostile user ────────────┐
+             │   emoji names, double-clicked Pay, Back       │
+             │   mid-checkout, negative quantities…          │
+             ▼                                               │
+   bug report ──► Capture ──► plain-English flow ──► Kane CLI runs it ──► fails? ──► confirmed bug
+                                                                                       │
+             ┌──────────── your coding agent ◄── Kane's evidence pack ◄────────────────┘
+             │   (Claude Code, Codex, Cursor, Gemini, any CLI)
+             ▼
+        code change ──► Kane CLI re-runs the flow + related flows ──► pass ──► fixed, locked as a
+                                       │                                      regression test forever
+                                       └──► fail ──► evidence goes back to the agent (up to N times)
+                                                     ──► then escalates to a human
+```
+
+## What's in the box
+
+| | |
+| --- | --- |
+| **Breaker** | Reads your product (routes, forms, and your code via your own agent) and sends Kane to attack it: input abuse, timing, navigation, state and accessibility. Only failures Kane judges to be *product* bugs are filed, so it doesn't cry wolf. |
+| **Capture** | Paste a support email, or point it at a GitHub issue. Personal details are stripped, your agent drafts a repro flow, and **Kane must watch it fail** before it counts as a bug. |
+| **Fixer** | Hands the bug, Kane's evidence pack and the likely code to *your* coding agent. Kane re-runs the flow and its neighbours. A bug is only *fixed* when Kane says so. |
+| **Guard** | Replays the flows a change touches, on every agent "done", every PR (GitHub Action) or on demand. Recorded steps replay from Kane's cache **for 0 credits**. |
+| **Claude Code hooks** | The tightest loop: Claude can't finish a task until Kane has replayed the flows its change touches. If one fails, Kane's evidence becomes Claude's next prompt. |
+| **MCP server** | Eight tools (`gremlin_guard`, `gremlin_capture`, `gremlin_get_evidence`…) for Cursor, Windsurf, Claude Code or any MCP client. |
+| **Dashboard** | `gremlin dash`: a local dashboard that follows every loop live: flows, bugs, Kane's step-by-step evidence and screenshots, fix attempts, credits. |
+
+Flows are plain markdown anyone can read, write and review:
+
+```markdown
+---
+title: A welcome coupon takes 10% off
+type: happy
+start: /product/ember-vase
+tags: [checkout, coupon]
+---
+
+1. Click "Add to cart"
+2. Go to the checkout page
+3. Type WELCOME10 into the coupon code field and click "Apply"
+
+## Expect
+
+- A message says the 10% welcome discount was applied
+- The order summary shows a discount of $6.40
+```
+
+Gremlin compiles each flow to a Kane `_test.md` (one `## Step` per line, the expectations become Kane assertions) and runs
+`kane-cli testmd run … --agent --headless`. Persona logins are passed as Kane `--variables`, never written to disk.
+
+## Quickstart
+
+You need Node 20+, Chrome, and [Kane CLI](https://www.npmjs.com/package/@testmuai/kane-cli) signed in.
+
+```bash
+npm install -g @testmuai/kane-cli && kane-cli login
+
+git clone https://github.com/SCARPxVeNOM/gremlin.git
+cd gremlin && npm install && npm run build
+cd packages/gremlin && npm link          # puts `gremlin` on your PATH
+
+cd ~/your-app
+gremlin init                             # 4 questions, then drafts and runs your first flows
+gremlin break                            # hunt for bugs
+gremlin dash                             # watch it all at http://127.0.0.1:4777
+```
+
+`gremlin init` detects your stack, asks for the URL, platforms, a test persona and your coding agent, writes
+`gremlin.config.yaml`, has your agent draft happy-path flows, installs the hooks, MCP server and rules for that
+agent, and offers to run Kane on the drafts straight away.
+
+## Try it on Kiln
+
+[`examples/kiln`](examples/kiln) is a small ceramics shop with no dependencies and realistic bugs in it. Its happy-path
+flows are already recorded, so replaying them costs nothing.
+
+```bash
+cd examples/kiln
+gremlin doctor                 # Kane signed in? agent found? shop reachable?
+gremlin run --all              # replays 3 happy flows from Kane's cache (Gremlin starts the shop)
+gremlin break --max 6          # Breaker hunt: Claude Code reads server.js and proposes attacks
+gremlin capture                # paste the coupon complaint below
+gremlin fix BUG-001            # Claude Code fixes it, Kane proves it
+gremlin dash
+```
+
+A complaint to paste into Capture:
+
+```text
+Hi Kiln team, I'm Priya Sharma (priya.sharma@gmail.com, +1 415 555 0134).
+I typed welcome10 into the coupon box at checkout but it just says "That coupon code is not valid".
+```
+
+## How the loop closes
+
+The point of Gremlin is that **Kane's verdict always flows back to an agent**, and nothing counts until Kane agrees.
+
+1. **Fixer** (`gremlin fix`, or *Fix with agent* in the dashboard). Gremlin snapshots the tree and runs your agent
+   headless (`claude -p`, `codex exec`, `cursor-agent`, `gemini`, or any command) with a fix package: the flow, the failing
+   step, Kane's triage (as *a lead, not an instruction*), console and network errors, screenshot paths and the code that
+   most likely matters. Then Kane re-runs the flow and up to four related flows. If one fails, the next attempt gets the
+   new evidence. After `loop.attempts` tries the bug escalates to a human with everything attached.
+2. **Claude Code Stop hook** (`gremlin install claude`). When Claude finishes a turn, Gremlin diffs the session against
+   its baseline, maps changed files to flows through `guard.areas`, and has Kane replay them. A failure returns
+   `{"decision": "block", "reason": <Kane's evidence>}`, so Claude keeps working with the evidence as its next prompt.
+3. **MCP and rules** for every other agent: `gremlin_guard` and `gremlin_verify_fix` return Kane's verdict as
+   structured text, and `gremlin_get_evidence` returns the failing screenshot as an image.
+4. **The tests close their own loop too.** When Kane rules that an agent-drafted flow failed because of how it was
+   written (an *automation* problem, not a product bug), Gremlin hands Kane's triage back to the agent to rewrite the
+   flow once, and Kane runs it again.
+
+### An agent can't cheat its way to green
+
+- **Flows are protected.** A `PreToolUse` hook denies edits to `.gremlin/flows/**`, `.gremlin/lock.json` and
+  `gremlin.config.yaml`. After every Fixer attempt, any change to a protected path is reverted and recorded.
+- **Flows are locked.** Approved flows are hashed into `.gremlin/lock.json`. Guard blocks on a flow whose meaning changed
+  without a human approving it, so weakening an expectation fails the build.
+- **Fail first.** A captured repro only becomes a bug once Kane has watched it fail. A fix only counts once Kane has
+  watched the same flow pass.
+- **Kane triage filters noise.** Failures Kane attributes to the automation, not the product, are held for review.
+  A failure that passes on the automatic retry is marked flaky; three flakes in ten runs quarantines the flow.
+
+### Guardrails
+
+- Never against production: `app.production: true` is refused, and so are hosts that aren't local or preview-like
+  unless you set `production: false` explicitly.
+- No real money or messages: flows that mention real payments, live keys or real card numbers are refused (published
+  test cards are fine).
+- Budgets per run, per day and per bug, tracked in a credit ledger.
+- Emails, phone numbers, card numbers and tokens are redacted from bug reports and Kane evidence before anything else sees them.
+
+## Commands
+
+| Command | What it does |
+| --- | --- |
+| `gremlin init` | Set Gremlin up: config, flow library, agent connector, starter flows |
+| `gremlin doctor` | Check Kane CLI, your coding agent, the app and the config |
+| `gremlin run [flows…] [--tag t] [--all]` | Run flows through Kane now |
+| `gremlin break [--area a] [--category c] [--max n]` | Breaker hunt |
+| `gremlin capture [text] [--issue 42] [--comment]` | Turn a bug report into a Kane-confirmed repro |
+| `gremlin fix <bug> [--mode suggest\|approve\|autonomous]` | Hand a bug to your agent; Kane proves the fix |
+| `gremlin verify <bug>` | Re-run a bug's flow after a fix made outside Gremlin |
+| `gremlin guard [--all] [--base origin/main] [--ci]` | Replay the flows a change touches; exit 1 on failure |
+| `gremlin flows list\|show\|new\|approve\|retire` | Manage the flow library |
+| `gremlin bugs [id]` | Bugs with their evidence and fix attempts |
+| `gremlin report` | Weekly summary: found, fixed, regressions caught, flaky flows, credits |
+| `gremlin dash` | Local dashboard on port 4777 |
+| `gremlin mcp` | MCP server on stdio |
+| `gremlin install claude\|cursor\|codex\|gemini\|ci` | Install a connector |
+
+### GitHub Action
+
+`gremlin install ci` writes `.github/workflows/gremlin-guard.yml`. It uses this repo as a composite action:
+
+```yaml
+- uses: SCARPxVeNOM/gremlin@main
+  with:
+    base: origin/${{ github.base_ref }}
+    lt-username: ${{ secrets.LT_USERNAME }}
+    lt-access-key: ${{ secrets.LT_ACCESS_KEY }}
+```
+
+Guard comments a verdict table on the PR and uploads Kane's evidence packs as an artifact.
+
+## Configuration
+
+`gremlin.config.yaml` (secrets come from environment variables, written as `${VAR}`):
+
+```yaml
+app:
+  name: Kiln
+  url: http://localhost:4000
+  start: node server.js        # Gremlin starts the app when a run needs it
+  reset: POST /__reset         # fresh test data before every run
+  production: false
+personas:
+  shopper: { email: ${SHOPPER_EMAIL}, password: ${SHOPPER_PASSWORD} }
+agent: { name: claude-code }   # claude-code | codex | cursor | gemini | custom | none
+loop: { mode: approve, attempts: 3 }
+guard:
+  trigger: [agent-finish, pr]
+  areas: { checkout: ["src/checkout/**", "src/lib/cart*"] }
+breaker: { categories: [input, timing, navigation, state, accessibility], max_flows: 6 }
+budget: { per_run: 600, per_day: 3000, per_bug: 600 }
+protected_paths: ["src/payments/**"]
+kane: { headless: true, max_steps: 40, bug_detection: continue }
+```
+
+What lives in `.gremlin/`: `flows/{happy,adversarial,regression}`, `bugs/`, `lock.json` and `kane/` (compiled tests and
+Kane's replay recordings) are committed. `runs/`, `evidence/`, `events.jsonl`, the credit ledger and stats stay local.
+
+## Repository
+
+```
+packages/gremlin     the CLI (gremlin-qa): core loops, Kane runner, agent connectors, hooks, MCP, dashboard server
+packages/dashboard   the dashboard: Vite, React 19, Tailwind v4, shadcn/ui
+examples/kiln        a demo shop with planted bugs and recorded happy flows
+action.yml           the Guard GitHub Action
+docs/SPEC.md         the product spec
+```
+
+```bash
+npm run build        # dashboard, then the CLI (bundles the dashboard into packages/gremlin/dist)
+npm test             # unit tests
+npm run typecheck
+npm run dev:dash     # dashboard dev server; proxies /api to a running `gremlin dash`
+```
+
+## License
+
+MIT

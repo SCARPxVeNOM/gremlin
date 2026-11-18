@@ -1,0 +1,47 @@
+name: Gremlin Guard
+description: Replay the Gremlin flows a change touches with Kane CLI in a real browser, and fail the check if any break.
+author: SCARPxVeNOM
+branding:
+  icon: shield
+  color: gray-dark
+
+inputs:
+  base:
+    description: Git ref to diff against, so only the flows this change touches are replayed (e.g. origin/main). Empty replays every active flow.
+    required: false
+    default: ''
+  working-directory:
+    description: Directory holding gremlin.config.yaml.
+    required: false
+    default: '.'
+  lt-username:
+    description: TestMu AI (LambdaTest) username for Kane CLI.
+    required: true
+  lt-access-key:
+    description: TestMu AI (LambdaTest) access key for Kane CLI.
+    required: true
+
+outputs:
+  comment:
+    description: Path to the Markdown verdict written for the pull request.
+    value: ${{ inputs.working-directory }}/.gremlin/guard-comment.md
+
+runs:
+  using: composite
+  steps:
+    - name: Build Gremlin
+      shell: bash
+      working-directory: ${{ github.action_path }}
+      run: |
+        npm ci --no-audit --no-fund
+        npm run build -w gremlin-qa
+        npm install -g @testmuai/kane-cli
+
+    - name: Replay flows with Kane CLI
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      env:
+        LT_USERNAME: ${{ inputs.lt-username }}
+        LT_ACCESS_KEY: ${{ inputs.lt-access-key }}
+        GREMLIN_BASE: ${{ inputs.base }}
+      run: node "${{ github.action_path }}/packages/gremlin/dist/cli.js" guard --ci ${GREMLIN_BASE:+--base "$GREMLIN_BASE"}

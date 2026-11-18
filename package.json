@@ -1,0 +1,19 @@
+{
+  "name": "gremlin-monorepo",
+  "private": true,
+  "description": "Gremlin: a drop-in QA loop verified by Kane CLI.",
+  "license": "MIT",
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "npm run build -w @gremlin/dashboard && npm run build -w gremlin-qa",
+    "dev:dash": "npm run dev -w @gremlin/dashboard",
+    "test": "npm test -w gremlin-qa",
+    "typecheck": "npm run typecheck -w gremlin-qa && npm run typecheck -w @gremlin/dashboard",
+    "demo:shop": "node examples/kiln/server.js"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
