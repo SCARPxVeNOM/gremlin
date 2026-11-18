@@ -1,7 +1,7 @@
 {
   "name": "gremlin-monorepo",
   "private": true,
-  "description": "Gremlin: a drop-in QA loop verified by Kane CLI.",
+  "description": "Gremlin: every bug report becomes a failing test, a fix and a regression test, refereed by Kane CLI.",
   "license": "MIT",
   "workspaces": [
     "packages/*"

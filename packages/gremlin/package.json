@@ -1,7 +1,7 @@
 {
   "name": "gremlin-qa",
   "version": "0.1.0",
-  "description": "A drop-in QA loop: a hostile user that attacks your app, bug reports that become tests, your own coding agent as the fixer, and Kane CLI as the referee.",
+  "description": "Every bug report becomes a failing test, a fix and a regression test: your own coding agent does the work, Kane CLI referees every step in a real browser, and a hostile-user Breaker finds the bugs nobody reported.",
   "type": "module",
   "license": "MIT",
   "bin": {

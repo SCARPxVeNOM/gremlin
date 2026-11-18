@@ -5,47 +5,119 @@
 <h1 align="center">Gremlin</h1>
 
 <p align="center">
-  A drop-in QA loop for any product.<br>
-  One agent attacks your app like a hostile user, every bug report becomes a test,<br>
-  your own coding agent fixes what breaks, and <strong>Kane CLI</strong> proves each fix in a real browser.
+  Every bug report becomes a failing test, a fix and a regression test.<br>
+  Your own coding agent does the work. <strong>Kane CLI</strong> referees every step in a real browser.
 </p>
 
 <p align="center">
+  <a href="#one-bug-end-to-end">One bug, end to end</a> ·
   <a href="#quickstart">Quickstart</a> ·
   <a href="#try-it-on-kiln">Try it on the demo shop</a> ·
   <a href="#how-the-loop-closes">How the loop closes</a> ·
-  <a href="#commands">Commands</a> ·
-  <a href="docs/SPEC.md">Spec</a>
+  <a href="#honest-limits">Honest limits</a>
+</p>
+
+<p align="center">
+  <img src="docs/assets/red-to-green.png" width="900" alt="Kane CLI's screenshots of the same flow. Before the fix, checkout says 'That coupon code is not valid.' and the discount is $0.00. After Claude Code's fix, it says '10% welcome discount applied.' and the discount is -$2.80.">
 </p>
 
 ---
 
-AI coding agents declare work "done" without proof that a real user can finish the flow. Gremlin makes that proof
-mandatory. It never decides on its own whether something works: **every pass and every fail in Gremlin is a Kane CLI
-run** in a real browser, with an evidence pack behind it.
+A customer writes in: *"I typed welcome10 into the coupon box at checkout but it just says 'That coupon code is not
+valid'."* Usually that email becomes a ticket, someone reproduces it by hand, a fix ships, and nothing stops the bug
+from coming back.
+
+With Gremlin, **the email becomes the test**. Your coding agent turns it into a plain-English flow, and it only counts
+as a bug once Kane CLI has watched that flow fail in a real browser. Your agent then fixes the product (it isn't allowed
+to touch the test), Kane re-runs the same flow and its neighbours, and the flow is locked into a regression library
+that every later agent "done" and every PR replays.
+
+Gremlin never decides on its own whether something works: **every pass and every fail is a Kane CLI run**, with an
+evidence pack behind it.
 
 ```
-             ┌──────────── Breaker: hostile user ────────────┐
-             │   emoji names, double-clicked Pay, Back       │
-             │   mid-checkout, negative quantities…          │
-             ▼                                               │
-   bug report ──► Capture ──► plain-English flow ──► Kane CLI runs it ──► fails? ──► confirmed bug
-                                                                                       │
-             ┌──────────── your coding agent ◄── Kane's evidence pack ◄────────────────┘
+   support email ──┐
+   GitHub issue ───┴──► Capture ──► plain-English flow ──► Kane CLI runs it ──► fails? ──► confirmed bug
+                     (strips personal data)    ▲                                                 │
+   Breaker: a hostile user's attack ───────────┘                                                 │
+                                                                                                 │
+             ┌──────────── your coding agent ◄── Kane's evidence pack ◄──────────────────────────┘
              │   (Claude Code, Codex, Cursor, Gemini, any CLI)
              ▼
-        code change ──► Kane CLI re-runs the flow + related flows ──► pass ──► fixed, locked as a
-                                       │                                      regression test forever
+        code change ──► Kane CLI re-runs the flow + related flows ──► pass ──► fixed, locked as a regression
+                                       │                                      test that every "done" and PR replays
                                        └──► fail ──► evidence goes back to the agent (up to N times)
                                                      ──► then escalates to a human
 ```
+
+## One bug, end to end
+
+BUG-005 from a real session on the [Kiln demo shop](examples/kiln), with Claude Code as the agent. Every run, screenshot
+and prompt below is in [`docs/demo-run`](docs/demo-run).
+
+1. **The report.** The complaint above, pasted into Capture. Gremlin replaced the customer's email address and phone
+   number with `[redacted-…]` before the agent or Kane saw it.
+2. **Red.** Claude Code drafted the repro below. Kane ran it and it **failed**, then failed again on the automatic
+   retry. Kane's triage: an application issue, `validation_defect`, 90% confident, *"The checkout rejects the expected
+   10% welcome coupon instead of applying its $2.80 discount."* Only then was BUG-005 filed. Capture took 3 minutes
+   and 47 Kane credits.
+3. **The fix.** Claude Code got Kane's evidence as a [fix package](docs/demo-run/.gremlin/bugs/BUG-005/attempt-1.md)
+   and found the root cause in 41 seconds: the coupon lookup used exactly what the customer typed, and the codes are
+   stored in capitals.
+4. **Green.** Gremlin restarted the shop so Kane would test the new code. Kane re-ran the flow and the 2 related
+   checkout flows, and all **passed**. The flow moved to `regression/` and was locked. That took 2½ minutes and
+   7 credits.
+5. **Kept fixed.** We then undid the fix by hand, the way a bad merge would, and asked a new Claude Code session for an
+   unrelated accessibility fix. When Claude said it was done, the Stop hook had Kane replay the flows its change
+   touched. The coupon flow **failed**, so "done" was refused and Kane's evidence became Claude's next prompt. Claude
+   restored the fix, and Kane passed all 5 flows. Replaying that flow now costs 0 credits.
+
+The flow Claude Code drafted from the complaint. `fail_first` is the Kane run that watched it fail, and the flow is
+hashed into `.gremlin/lock.json`, so no agent can quietly weaken it later:
+
+```markdown
+---
+title: A lowercase welcome coupon code (welcome10) is accepted and takes 10% off
+type: regression
+start: /product/ash-glaze-mug
+source: capture:paste
+bug: BUG-005
+fail_first: RUN-20261118-170700-80b75b
+---
+
+1. Click "Add to cart"
+2. Go to the checkout page
+3. Type welcome10 (all lowercase) into the "Coupon code" field and click "Apply"
+
+## Expect
+
+- The message "That coupon code is not valid." is not shown
+- A message says the 10% welcome discount was applied
+- The order summary shows a discount of $2.80
+```
+
+And the fix, in `server.js`:
+
+```diff
+ function cartTotals(sid, couponCode) {
+   const lines = cartLines(sid);
+   const subtotal = lines.reduce((sum, l) => sum + l.product.price * l.qty, 0);
+-  const coupon = couponCode ? coupons[couponCode] : undefined;
++  // Coupon codes are case-insensitive: customers type them however they like.
++  const key = String(couponCode ?? '').trim().toUpperCase();
++  const coupon = key && Object.hasOwn(coupons, key) ? coupons[key] : undefined;
+```
+
+Not every bug comes with a report, so the same loop has a second way in: the **Breaker** attacks your app like a
+hostile user and files only what Kane confirms. In the same session it found 4 more bugs (see
+[Results on Kiln](#results-on-kiln)).
 
 ## What's in the box
 
 | | |
 | --- | --- |
+| **Capture** | Paste a support email, pass a file, or point it at a GitHub issue (Gremlin can comment the verdict back). Personal details are stripped, your agent drafts a repro flow, and **Kane must watch it fail** before it counts as a bug. |
 | **Breaker** | Reads your product (routes, forms, and your code via your own agent) and sends Kane to attack it: input abuse, timing, navigation, state and accessibility. Only failures Kane judges to be *product* bugs are filed, so it doesn't cry wolf. |
-| **Capture** | Paste a support email, or point it at a GitHub issue. Personal details are stripped, your agent drafts a repro flow, and **Kane must watch it fail** before it counts as a bug. |
 | **Fixer** | Hands the bug, Kane's evidence pack and the likely code to *your* coding agent. Kane re-runs the flow and its neighbours. A bug is only *fixed* when Kane says so. |
 | **Guard** | Replays the flows a change touches, on every agent "done", every PR (GitHub Action) or on demand. Recorded steps replay from Kane's cache **for 0 credits**. |
 | **Claude Code hooks** | The tightest loop: Claude can't finish a task until Kane has replayed the flows its change touches. If one fails, Kane's evidence becomes Claude's next prompt. |
@@ -105,9 +177,9 @@ flows are already recorded, so replaying them costs nothing.
 cd examples/kiln
 gremlin doctor                 # Kane signed in? agent found? shop reachable?
 gremlin run --all              # replays 3 happy flows from Kane's cache (Gremlin starts the shop)
+gremlin capture                # paste the coupon complaint below: Kane must watch it fail
+gremlin fix BUG-001            # Claude Code fixes it, Kane proves it, the flow is locked
 gremlin break --max 6          # Breaker hunt: Claude Code reads server.js and proposes attacks
-gremlin capture                # paste the coupon complaint below
-gremlin fix BUG-001            # Claude Code fixes it, Kane proves it
 gremlin dash
 ```
 
@@ -135,7 +207,7 @@ cd docs/demo-run && gremlin dash
 | Breaker hunt | Claude Code read `server.js` and proposed 5 attacks, the catalog added 3. 4 distinct bugs (1 critical, 3 high); 2 more attacks reproduced bugs already found and were folded in; 1 held and became a guard | 540 |
 | Capture | A complaint with an email and phone number was redacted, drafted into a repro, and failed twice under Kane: BUG-005 | 47 |
 | Fixer | Claude Code fixed BUG-005 and BUG-002 on the first attempt each. Kane passed each repro and its related flows; for BUG-002 that included the second attack that had reproduced it, which joined the regression library too | 29 |
-| Stop hook | A real Claude Code session, asked only for an accessibility fix, was refused "done" because the coupon fix had regressed. Kane's evidence became its next prompt; it repaired the regression and Kane passed all 5 flows | 39 |
+| Stop hook | We undid the coupon fix by hand, then asked a real Claude Code session for an unrelated accessibility fix. It was refused "done" because Kane's replay of the coupon flow failed. Kane's evidence became its next prompt; it restored the fix and Kane passed all 5 flows | 39 |
 | Final replay | 5 flows, all passing; Guard closed the reopened bug again | 0 |
 
 25 of the 43 runs cost nothing. The bugs, in Kane's own words:
@@ -148,9 +220,24 @@ cd docs/demo-run && gremlin dash
 | BUG-004 The search heading renders typed markup as HTML | high | ui_data_defect | open |
 | BUG-005 `welcome10` is rejected at checkout (from a user report) | high | validation_defect | fixed, regressed, fixed again |
 
-Kane is not infallible, and Gremlin doesn't pretend it is. Claude Code's attack plan pointed at `POST /api/orders` never
-clearing the cart, a real bug nobody planted. Kane judged both runs an automation fault, so Gremlin did not file it.
-That case is why an agent can now dispute a triage, citing code: Kane's verdict still decides, and a human settles it.
+## Honest limits
+
+- **Kane can be wrong, and Gremlin doesn't overrule it.** Claude Code's attack plan pointed at `POST /api/orders` never
+  clearing the cart, a real bug nobody planted. Kane judged both runs an automation fault, so Gremlin did not file it.
+  That's why an agent can now dispute a triage, citing code: the flow is marked *Disputed* and a human settles it.
+- **Kiln is a demo.** Its bugs were planted (except that cart bug), and the regression in step 5 of
+  [One bug, end to end](#one-bug-end-to-end) was made by hand. Gremlin hasn't been run on a production codebase yet.
+- **Web only, for now.** The config and flows accept `ios` and `android`, but Gremlin only runs Kane's browser tests
+  today; Kane's mobile runs aren't wired in.
+- **Capture needs a report Kane can reproduce.** If Kane follows the drafted flow and the app behaves, it isn't treated
+  as a bug: Gremlin records it as *can't reproduce*, with Kane's evidence and the question to ask the reporter.
+- **Hunting costs credits; replays don't.** The Breaker spent 540 credits on 8 attacks. Replays of recorded flows that
+  pass are free (25 of the 43 runs in the session), but a replay that fails, or a flow Kane hasn't recorded yet, costs
+  credits.
+- **Verification takes minutes, not seconds.** Each Stop-hook check in the session replayed 5 flows and took 3 to 5
+  minutes before Claude could finish.
+- **Gremlin only restarts an app it started.** If you run the app yourself without hot reload, Gremlin warns once and
+  Kane may be testing the old code.
 
 ## How the loop closes
 
