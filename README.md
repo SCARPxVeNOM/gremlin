@@ -118,6 +118,40 @@ Hi Kiln team, I'm Priya Sharma (priya.sharma@gmail.com, +1 415 555 0134).
 I typed welcome10 into the coupon box at checkout but it just says "That coupon code is not valid".
 ```
 
+## Results on Kiln
+
+One session against `examples/kiln`, every verdict a real Kane CLI run, Claude Code as the agent. The whole record
+(flows, 43 runs, bugs, fix packages, Kane screenshots, events) is in [`docs/demo-run`](docs/demo-run). Browse it without
+running anything:
+
+```bash
+cd docs/demo-run && gremlin dash
+```
+
+| Step | What happened | Kane credits |
+| --- | --- | --- |
+| Replay | 3 happy flows replayed from Kane's recordings | 0 |
+| Planted regression | `WELCOME10` quietly changed to 15%: the replay failed with *"a $9.60 discount on a $64.00 subtotal, rather than $6.40"* | 0 to catch |
+| Breaker hunt | Claude Code read `server.js` and proposed 5 attacks, the catalog added 3. 4 distinct bugs (1 critical, 3 high); 2 more attacks reproduced bugs already found and were folded in; 1 held and became a guard | 540 |
+| Capture | A complaint with an email and phone number was redacted, drafted into a repro, and failed twice under Kane: BUG-005 | 47 |
+| Fixer | Claude Code fixed BUG-005 and BUG-002 on the first attempt each. Kane passed each repro and its related flows; for BUG-002 that included the second attack that had reproduced it, which joined the regression library too | 29 |
+| Stop hook | A real Claude Code session, asked only for an accessibility fix, was refused "done" because the coupon fix had regressed. Kane's evidence became its next prompt; it repaired the regression and Kane passed all 5 flows | 39 |
+| Final replay | 5 flows, all passing; Guard closed the reopened bug again | 0 |
+
+25 of the 43 runs cost nothing. The bugs, in Kane's own words:
+
+| Bug | Severity | Kane's category | Status |
+| --- | --- | --- | --- |
+| BUG-001 Checkout stays on the error page for a shopper named Łucja (the order is saved, then the response fails) | critical | functional_defect | open |
+| BUG-002 Cart accepts negative quantities and a negative total | high | validation_defect | fixed, proven |
+| BUG-003 Searching for "100% stoneware" shows an error page | high | functional_defect | open |
+| BUG-004 The search heading renders typed markup as HTML | high | ui_data_defect | open |
+| BUG-005 `welcome10` is rejected at checkout (from a user report) | high | validation_defect | fixed, regressed, fixed again |
+
+Kane is not infallible, and Gremlin doesn't pretend it is. Claude Code's attack plan pointed at `POST /api/orders` never
+clearing the cart, a real bug nobody planted. Kane judged both runs an automation fault, so Gremlin did not file it.
+That case is why an agent can now dispute a triage, citing code: Kane's verdict still decides, and a human settles it.
+
 ## How the loop closes
 
 The point of Gremlin is that **Kane's verdict always flows back to an agent**, and nothing counts until Kane agrees.

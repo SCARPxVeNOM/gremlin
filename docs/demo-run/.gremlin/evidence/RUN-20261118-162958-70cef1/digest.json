@@ -21,7 +21,7 @@
       "status": "passed",
       "summary": "click: Clicking the Ash Glaze Mug in the shop product grid",
       "url": "http://localhost:4000/",
-      "screenshot": "step-2-0-2.png"
+      "screenshot": "step-2-0-2.jpg"
     },
     {
       "ordinal": 3,
@@ -30,7 +30,7 @@
       "status": "passed",
       "summary": "click: Clicking Add to cart for Ash Glaze Mug",
       "url": "http://localhost:4000/product/ash-glaze-mug",
-      "screenshot": "step-3-1-1.png"
+      "screenshot": "step-3-1-1.jpg"
     },
     {
       "ordinal": 4,
@@ -39,7 +39,7 @@
       "status": "passed",
       "summary": "click: Opening the cart dropdown",
       "url": "http://localhost:4000/product/ash-glaze-mug",
-      "screenshot": "step-4-2-1.png"
+      "screenshot": "step-4-2-1.jpg"
     },
     {
       "ordinal": 5,
@@ -48,7 +48,7 @@
       "status": "passed",
       "summary": "click: Clicking Checkout in the cart summary below the total",
       "url": "http://localhost:4000/cart",
-      "screenshot": "step-5-2-2.png"
+      "screenshot": "step-5-2-2.jpg"
     },
     {
       "ordinal": 6,
@@ -66,7 +66,7 @@
       "status": "passed",
       "summary": "fill: Type \"Sam Rivera\" into \"Full name\"",
       "url": "http://localhost:4000/checkout",
-      "screenshot": "step-7-3-2.png"
+      "screenshot": "step-7-3-2.jpg"
     },
     {
       "ordinal": 8,
@@ -75,7 +75,7 @@
       "status": "passed",
       "summary": "fill: Type \"sam@example.test\" into \"Email\"",
       "url": "http://localhost:4000/checkout",
-      "screenshot": "step-8-3-3.png"
+      "screenshot": "step-8-3-3.jpg"
     },
     {
       "ordinal": 9,
@@ -84,7 +84,7 @@
       "status": "passed",
       "summary": "fill: Type \"12 Clay Street\" into \"Address\"",
       "url": "http://localhost:4000/checkout",
-      "screenshot": "step-9-3-4.png"
+      "screenshot": "step-9-3-4.jpg"
     },
     {
       "ordinal": 10,
@@ -93,7 +93,7 @@
       "status": "passed",
       "summary": "fill: Type \"Portland\" into \"City\"",
       "url": "http://localhost:4000/checkout",
-      "screenshot": "step-10-3-5.png"
+      "screenshot": "step-10-3-5.jpg"
     },
     {
       "ordinal": 11,
@@ -102,7 +102,7 @@
       "status": "passed",
       "summary": "click: Clicking Place order in the checkout form",
       "url": "http://localhost:4000/checkout",
-      "screenshot": "step-11-4-1.png"
+      "screenshot": "step-11-4-1.jpg"
     },
     {
       "ordinal": 12,
@@ -143,16 +143,16 @@
   ],
   "screenshots": [
     "step-1-0-1.jpg",
-    "step-2-0-2.png",
-    "step-3-1-1.png",
-    "step-4-2-1.png",
-    "step-5-2-2.png",
+    "step-2-0-2.jpg",
+    "step-3-1-1.jpg",
+    "step-4-2-1.jpg",
+    "step-5-2-2.jpg",
     "step-6-3-1.jpg",
-    "step-7-3-2.png",
-    "step-8-3-3.png",
-    "step-9-3-4.png",
-    "step-10-3-5.png",
-    "step-11-4-1.png",
+    "step-7-3-2.jpg",
+    "step-8-3-3.jpg",
+    "step-9-3-4.jpg",
+    "step-10-3-5.jpg",
+    "step-11-4-1.jpg",
     "step-12-5-1.jpg",
     "step-13-5-2.jpg",
     "step-14-5-3.jpg",

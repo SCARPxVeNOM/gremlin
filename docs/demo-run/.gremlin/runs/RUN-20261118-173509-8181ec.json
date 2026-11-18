@@ -156,7 +156,7 @@
         "status": "passed",
         "summary": "click: Clicking View cart",
         "url": "http://localhost:4000/product/ash-glaze-mug",
-        "screenshot": "step-3-1-1.png"
+        "screenshot": "step-3-1-1.jpg"
       },
       {
         "ordinal": 4,
@@ -190,7 +190,7 @@
         "status": "passed",
         "summary": "fill: Type \"shopper@example.test\" into \"Email\"",
         "url": "http://localhost:4000/checkout",
-        "screenshot": "step-7-2-3.png"
+        "screenshot": "step-7-2-3.jpg"
       },
       {
         "ordinal": 8,
@@ -258,7 +258,7 @@
         "status": "passed",
         "summary": "fill: Type \"1 Test Street\" into \"Address\"",
         "url": "http://localhost:4000/checkout",
-        "screenshot": "step-15-5-2.png"
+        "screenshot": "step-15-5-2.jpg"
       },
       {
         "ordinal": 16,
@@ -275,7 +275,7 @@
         "status": "passed",
         "summary": "click: Clicking Place order button in checkout form",
         "url": "http://localhost:4000/checkout",
-        "screenshot": "step-17-6-1.png"
+        "screenshot": "step-17-6-1.jpg"
       },
       {
         "ordinal": 18,
@@ -374,14 +374,14 @@
     ],
     "screenshots": [
       "step-1-0-1.jpg",
-      "step-3-1-1.png",
+      "step-3-1-1.jpg",
       "step-5-2-1.jpg",
-      "step-7-2-3.png",
+      "step-7-2-3.jpg",
       "step-9-3-2.jpg",
       "step-11-3-4.jpg",
       "step-13-4-2.jpg",
-      "step-15-5-2.png",
-      "step-17-6-1.png",
+      "step-15-5-2.jpg",
+      "step-17-6-1.jpg",
       "step-19-7-2.jpg",
       "step-21-7-4.jpg",
       "step-23-7-6.jpg",

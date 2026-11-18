@@ -1576,7 +1576,7 @@
 {"ts":"2026-11-18T12:07:20.002Z","kind":"agent","msg":"Read server.js","job":"fix-f32592","data":{"bugId":"BUG-002","attempt":1,"activity":"read"}}
 {"ts":"2026-11-18T12:07:20.754Z","kind":"agent","msg":"Read public/app.js","job":"fix-f32592","data":{"bugId":"BUG-002","attempt":1,"activity":"read"}}
 {"ts":"2026-11-18T12:07:29.800Z","kind":"agent","msg":"Edit server.js","job":"fix-f32592","data":{"bugId":"BUG-002","attempt":1,"activity":"edit"}}
-{"ts":"2026-11-18T12:07:30.524Z","kind":"agent","msg":"You've hit your session limit · resets 8:10pm (Asia/Calcutta)","job":"fix-f32592","data":{"bugId":"BUG-002","attempt":1,"activity":"text"}}
+{"ts":"2026-11-18T12:07:30.524Z","kind":"agent","msg":"You've hit your session limit","job":"fix-f32592","data":{"bugId":"BUG-002","attempt":1,"activity":"text"}}
 {"ts":"2026-11-18T12:07:30.528Z","kind":"agent","msg":"agent reported an error","job":"fix-f32592","data":{"bugId":"BUG-002","attempt":1,"activity":"done"}}
 {"ts":"2026-11-18T12:07:32.180Z","kind":"flow-start","msg":"Cart rejects a negative quantity","job":"fix-f32592","data":{"runId":"RUN-20261118-173732-de633e","flowId":"adversarial/cart-rejects-a-negative-quantity","purpose":"fix","bugId":"BUG-002"}}
 {"ts":"2026-11-18T12:07:43.453Z","kind":"kane-step","msg":"Step 1: Click Add to cart","job":"fix-f32592","data":{"runId":"RUN-20261118-173732-de633e","index":1,"status":"running"}}

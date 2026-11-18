@@ -36,7 +36,7 @@
       "status": "passed",
       "summary": "fill: Type \"bowl\" into \"Search\"",
       "url": "http://localhost:4000/",
-      "screenshot": "step-3-0-3.png"
+      "screenshot": "step-3-0-3.jpg"
     },
     {
       "ordinal": 4,
@@ -96,7 +96,7 @@
   "screenshots": [
     "step-1-0-1.jpg",
     "step-2-0-2.jpg",
-    "step-3-0-3.png",
+    "step-3-0-3.jpg",
     "step-4-0-4.jpg",
     "step-5-1-1.jpg",
     "step-6-1-2.jpg",

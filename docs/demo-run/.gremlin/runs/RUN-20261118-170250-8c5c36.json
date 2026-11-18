@@ -180,7 +180,7 @@
         "status": "passed",
         "summary": "click: Clicking Checkout in the cart summary",
         "url": "http://localhost:4000/cart",
-        "screenshot": "step-5-1-2.png"
+        "screenshot": "step-5-1-2.jpg"
       },
       {
         "ordinal": 6,
@@ -214,7 +214,7 @@
         "status": "passed",
         "summary": "type: Type \"shopper@example.test\" into \"Email\"",
         "url": "http://localhost:4000/checkout",
-        "screenshot": "step-9-2-3.png"
+        "screenshot": "step-9-2-3.jpg"
       },
       {
         "ordinal": 10,
@@ -282,7 +282,7 @@
         "status": "passed",
         "summary": "type: Type \"1 Test Street\" into \"Address\"",
         "url": "http://localhost:4000/checkout",
-        "screenshot": "step-17-5-2.png"
+        "screenshot": "step-17-5-2.jpg"
       },
       {
         "ordinal": 18,
@@ -348,13 +348,13 @@
     "screenshots": [
       "step-1-0-1.jpg",
       "step-3-0-3.jpg",
-      "step-5-1-2.png",
+      "step-5-1-2.jpg",
       "step-7-2-1.jpg",
-      "step-9-2-3.png",
+      "step-9-2-3.jpg",
       "step-11-3-1.jpg",
       "step-13-3-3.jpg",
       "step-15-4-3.jpg",
-      "step-17-5-2.png",
+      "step-17-5-2.jpg",
       "step-19-5-4.jpg",
       "step-21-7-1.jpg",
       "step-23-7-3.jpg",

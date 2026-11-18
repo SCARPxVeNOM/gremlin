@@ -63,7 +63,7 @@
       "status": "passed",
       "summary": "click: Clicking Checkout in the cart summary below total",
       "url": "http://localhost:4000/cart",
-      "screenshot": "step-7-3-1.png"
+      "screenshot": "step-7-3-1.jpg"
     },
     {
       "ordinal": 8,
@@ -80,7 +80,7 @@
       "status": "passed",
       "summary": "type: Type \"Sam Rivera\" into \"Full name\"",
       "url": "http://localhost:4000/checkout",
-      "screenshot": "step-9-4-2.png"
+      "screenshot": "step-9-4-2.jpg"
     },
     {
       "ordinal": 10,
@@ -97,7 +97,7 @@
       "status": "passed",
       "summary": "type: Type \"12 Clay Street\" into \"Address\"",
       "url": "http://localhost:4000/checkout",
-      "screenshot": "step-11-4-4.png"
+      "screenshot": "step-11-4-4.jpg"
     },
     {
       "ordinal": 12,
@@ -148,7 +148,7 @@
       "status": "passed",
       "summary": "click: Clicking the cart icon to open the cart",
       "url": "http://localhost:4000/order/1041",
-      "screenshot": "step-17-7-1.png"
+      "screenshot": "step-17-7-1.jpg"
     },
     {
       "ordinal": 18,
@@ -173,12 +173,12 @@
     "step-1-0-1.jpg",
     "step-3-0-3.jpg",
     "step-5-1-2.jpg",
-    "step-7-3-1.png",
-    "step-9-4-2.png",
-    "step-11-4-4.png",
+    "step-7-3-1.jpg",
+    "step-9-4-2.jpg",
+    "step-11-4-4.jpg",
     "step-13-4-6.jpg",
     "step-15-6-1.jpg",
-    "step-17-7-1.png",
+    "step-17-7-1.jpg",
     "step-18-8-1.jpg",
     "step-19-8-2.jpg"
   ],

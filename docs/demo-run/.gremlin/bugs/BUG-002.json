@@ -42,7 +42,7 @@
       "blocked": [],
       "result": "passed",
       "durationS": 15.7,
-      "agentSummary": "You've hit your session limit · resets 8:10pm (Asia/Calcutta)",
+      "agentSummary": "You've hit your session limit",
       "runId": "RUN-20261118-173732-de633e",
       "relatedRuns": [
         "RUN-20261118-173913-0b0623",

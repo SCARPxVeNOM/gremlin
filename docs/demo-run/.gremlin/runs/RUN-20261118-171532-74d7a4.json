@@ -101,7 +101,7 @@
         "status": "passed",
         "summary": "click: Clicking Add to cart for Ash Glaze Mug",
         "url": "http://localhost:4000/product/ash-glaze-mug",
-        "screenshot": "step-2-0-2.png"
+        "screenshot": "step-2-0-2.jpg"
       },
       {
         "ordinal": 3,
@@ -110,7 +110,7 @@
         "status": "passed",
         "summary": "click: Clicking View cart",
         "url": "http://localhost:4000/product/ash-glaze-mug",
-        "screenshot": "step-3-1-1.png"
+        "screenshot": "step-3-1-1.jpg"
       },
       {
         "ordinal": 4,
@@ -119,7 +119,7 @@
         "status": "passed",
         "summary": "click: Clicking Checkout link",
         "url": "http://localhost:4000/cart",
-        "screenshot": "step-4-2-1.png"
+        "screenshot": "step-4-2-1.jpg"
       },
       {
         "ordinal": 5,
@@ -137,7 +137,7 @@
         "status": "passed",
         "summary": "fill: Type \"welcome10\" into \"Coupon code\"",
         "url": "http://localhost:4000/checkout",
-        "screenshot": "step-6-2-3.png"
+        "screenshot": "step-6-2-3.jpg"
       },
       {
         "ordinal": 7,
@@ -146,7 +146,7 @@
         "status": "passed",
         "summary": "click: Click \"Apply\"",
         "url": "http://localhost:4000/checkout",
-        "screenshot": "step-7-2-4.png"
+        "screenshot": "step-7-2-4.jpg"
       },
       {
         "ordinal": 8,
@@ -187,12 +187,12 @@
     ],
     "screenshots": [
       "step-1-0-1.jpg",
-      "step-2-0-2.png",
-      "step-3-1-1.png",
-      "step-4-2-1.png",
+      "step-2-0-2.jpg",
+      "step-3-1-1.jpg",
+      "step-4-2-1.jpg",
       "step-5-2-2.jpg",
-      "step-6-2-3.png",
-      "step-7-2-4.png",
+      "step-6-2-3.jpg",
+      "step-7-2-4.jpg",
       "step-8-3-1.jpg",
       "step-9-3-2.jpg",
       "step-10-3-3.jpg",
