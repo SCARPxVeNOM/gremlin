@@ -11,6 +11,7 @@ import { isAutomationFault } from './kane.ts';
 import { ensureDir } from './paths.ts';
 import { redactText } from './redact.ts';
 import { FLOW_RULES, reviseFlow, shouldRevise } from './revise.ts';
+import { findDuplicateBug } from './dedupe.ts';
 import { describeRun, runFlow, silentReporter, type Reporter } from './runner.ts';
 import { scoreConfidence, scoreSeverity, SEVERITY_ORDER } from './severity.ts';
 import {
@@ -37,7 +38,7 @@ export interface PlannedAttack extends AttackFlow {
 export interface Finding {
   flow: Flow;
   run: RunRecord;
-  outcome: 'bug' | 'held' | 'flaky' | 'noise' | 'error';
+  outcome: 'bug' | 'duplicate' | 'held' | 'flaky' | 'noise' | 'error';
   bug?: BugRecord;
 }
 
@@ -238,7 +239,8 @@ export async function runBreaker(project: Project, opts: BreakerOptions = {}): P
     report.findings.sort((a, b) => rank(b) - rank(a));
     report.reportPath = writeBreakerReport(project, report);
     const bugs = report.findings.filter((f) => f.outcome === 'bug').length;
-    endJob(paths, job, bugs ? 'failed' : 'passed', `${bugs} bug${bugs === 1 ? '' : 's'} found in ${report.findings.length} attacks`, {
+    const dupes = report.findings.filter((f) => f.outcome === 'duplicate').length;
+    endJob(paths, job, bugs ? 'failed' : 'passed', `${bugs} bug${bugs === 1 ? '' : 's'} found in ${report.findings.length} attacks${dupes ? ` (${dupes} more hit a bug already found)` : ''}`, {
       bugs,
       credits: round(report.credits, 2),
     });
@@ -277,9 +279,22 @@ function triageFinding(project: Project, flow: Flow, run: RunRecord, p: PlannedA
     return { flow, run, outcome: 'noise' };
   }
   recordAttack(paths, p.attack, true);
+  const title = bugTitle(flow, run);
+  const same = findDuplicateBug(paths, run, title);
+  if (same) {
+    // another attack tripped a bug we already have: corroborating evidence, not a new bug
+    same.runs.push(run.id);
+    same.confidence = Math.min(0.99, Math.max(same.confidence, scoreConfidence(run)) + 0.02);
+    same.credits += run.credits;
+    same.updatedAt = nowIso();
+    saveBug(paths, same);
+    updateFlowMeta(flow, { bug: same.id, status: 'confirmed', fail_first: run.id });
+    emit(paths, 'bug', `Same bug as ${same.id}, reproduced by a second attack: ${flow.title}`, { bugId: same.id, duplicate: true, runId: run.id }, job.id);
+    return { flow, run, outcome: 'duplicate', bug: same };
+  }
   const bug: BugRecord = {
     id: nextBugId(paths),
-    title: bugTitle(flow, run),
+    title,
     origin: 'breaker',
     status: 'candidate',
     severity: scoreSeverity(run, { attack: p.attack, tags: flow.tags }),
@@ -322,6 +337,9 @@ function writeBreakerReport(project: Project, r: BreakerReport): string {
       .filter((f) => f.outcome === 'bug')
       .map((f, i) => `| ${i + 1} | ${f.bug!.id} ${f.bug!.title} | ${f.bug!.severity} | ${Math.round(f.bug!.confidence * 100)}% | ${f.bug!.attack} | ${f.flow.id} | ${f.run.kane?.reason ?? ''} |`),
     '',
+    ...(r.findings.some((f) => f.outcome === 'duplicate')
+      ? ['## Same bug, found again', ...r.findings.filter((f) => f.outcome === 'duplicate').map((f) => `- ${f.flow.title}: reproduced ${f.bug!.id}`), '']
+      : []),
     '## Held (the app handled the attack; saved as adversarial guards)',
     ...r.findings.filter((f) => f.outcome === 'held').map((f) => `- ${f.flow.title}`),
     '',

@@ -179,7 +179,7 @@ export async function runFixer(project: Project, bugId: string, opts: FixOptions
       }
 
       // Side effects: replay related active flows before accepting the fix.
-      const related = opts.related === false ? [] : relatedFlows(project, flow);
+      const related = opts.related === false ? [] : relatedFlows(project, flow, 4, bug.id);
       attempt.relatedRuns = [];
       let sideEffect: { flow: Flow; run: RunRecord } | undefined;
       for (const rf of related) {
@@ -213,6 +213,11 @@ export async function runFixer(project: Project, bugId: string, opts: FixOptions
           ? updateFlowMeta(flow, { status: 'active', fail_first: failFirst })
           : moveFlow(paths, flow, 'regression', { status: 'active', fail_first: failFirst, bug: bug.id });
       lockFlow(paths, flow, 'fixer');
+      // Other repros of this bug (a captured report, a second attack) passed too: they guard it from now on as well.
+      for (const sib of related.filter((f) => f.bug === bug.id && f.status !== 'active')) {
+        const kept = sib.type === 'regression' ? updateFlowMeta(sib, { status: 'active' }) : moveFlow(paths, sib, 'regression', { status: 'active' });
+        lockFlow(paths, kept, 'fixer');
+      }
       if (flow.id !== bug.flowId) {
         bug.flowId = flow.id;
         saveBug(paths, bug);
@@ -253,11 +258,14 @@ export async function runFixer(project: Project, bugId: string, opts: FixOptions
 }
 
 /** Active flows that share a tag with the bug's flow: the ones most likely to show a side effect. */
-export function relatedFlows(project: Project, flow: Flow, limit = 4): Flow[] {
-  return listFlows(project.paths)
-    .filter((f) => f.id !== flow.id && f.status === 'active' && f.tags.some((t) => flow.tags.includes(t)))
-    .sort((a, b) => (a.type === 'happy' ? -1 : 0) - (b.type === 'happy' ? -1 : 0))
-    .slice(0, limit);
+/** Other repros of the same bug come first (they must pass too), then active flows in the same area. */
+export function relatedFlows(project: Project, flow: Flow, limit = 4, bugId?: string): Flow[] {
+  const all = listFlows(project.paths).filter((f) => f.id !== flow.id && f.status !== 'retired');
+  const siblings = bugId ? all.filter((f) => f.bug === bugId) : [];
+  const area = all
+    .filter((f) => !siblings.includes(f) && f.status === 'active' && f.tags.some((t) => flow.tags.includes(t)))
+    .sort((a, b) => (a.type === 'happy' ? -1 : 0) - (b.type === 'happy' ? -1 : 0));
+  return [...siblings, ...area].slice(0, Math.max(limit, siblings.length));
 }
 
 /** Re-run a bug's flow after a fix made by hand or by an agent outside Gremlin. */

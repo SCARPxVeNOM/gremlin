@@ -150,3 +150,30 @@ test('severity and confidence combine Kane triage with what broke', () => {
   assert.ok(scoreConfidence(reproduced) > scoreConfidence(flaky));
   assert.ok(scoreConfidence({ ...reproduced, evidence: serverError.evidence }) > scoreConfidence(reproduced));
 });
+
+test('a second attack on the same defect is folded into the existing bug', async () => {
+  const { findDuplicateBug } = await import('../src/core/dedupe.ts');
+  const { saveBug, saveRun } = await import('../src/core/store.ts');
+  const p = project({ app: { name: 'Kiln', url: 'http://localhost:4000' } });
+  const failing = (id: string, category: string, title: string, page: string) =>
+    run({
+      id,
+      kane: { status: 'failed', steps: [], durationS: 1, replayed: 0, authored: 1, errors: [], verdict: { confirmed: true, family: 'application_issue', category, title } } as any,
+      evidence: { pack: '', consoleErrors: [], networkFailures: [], steps: [], screenshots: [], failure: { message: '', pageUrl: page } },
+    });
+  const first = failing('RUN-A', 'validation_defect', 'Cart accepts negative quantities and negative totals', 'http://localhost:4000/checkout');
+  saveRun(p.paths, first);
+  saveBug(p.paths, {
+    id: 'BUG-001', title: 'Cart accepts negative quantities and negative totals', origin: 'breaker', status: 'candidate', severity: 'high',
+    confidence: 0.9, flowId: 'adversarial/a', tags: [], runs: ['RUN-A'], attempts: [], createdAt: '', updatedAt: '', credits: 0,
+  });
+
+  const again = failing('RUN-B', 'validation_defect', 'Negative cart quantities produce negative totals', 'http://localhost:4000/cart');
+  assert.equal(findDuplicateBug(p.paths, again, 'Negative cart quantities produce negative totals')?.id, 'BUG-001');
+
+  const otherKind = failing('RUN-C', 'functional_defect', 'Negative cart quantities produce negative totals', 'http://localhost:4000/cart');
+  assert.equal(findDuplicateBug(p.paths, otherKind, 'Negative cart quantities produce negative totals'), undefined);
+
+  const unrelated = failing('RUN-D', 'validation_defect', 'Checkout accepts an email address without a domain', 'http://localhost:4000/checkout');
+  assert.equal(findDuplicateBug(p.paths, unrelated, 'Checkout accepts an email address without a domain'), undefined);
+});

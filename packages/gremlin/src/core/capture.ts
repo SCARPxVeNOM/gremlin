@@ -8,6 +8,7 @@ import { endJob, startJob, type Job } from './jobs.ts';
 import { isAutomationFault } from './kane.ts';
 import { redact } from './redact.ts';
 import { FLOW_RULES, reviseFlow, shouldRevise } from './revise.ts';
+import { findDuplicateBug } from './dedupe.ts';
 import { describeRun, runFlow, silentReporter, type Reporter } from './runner.ts';
 import { scoreConfidence, scoreSeverity } from './severity.ts';
 import { emit, lockFlow, nextBugId, saveBug, type BugRecord, type RunRecord } from './store.ts';
@@ -153,6 +154,22 @@ export async function runCapture(project: Project, input: BugReportInput, opts: 
     const report = { source: input.source, ref: input.ref, url: input.url, text };
 
     if (run.status === 'failed' && !isAutomationFault(run.kane?.verdict)) {
+      const same = findDuplicateBug(paths, run, flow.title);
+      if (same) {
+        // users are reporting a bug Gremlin already has: link the report and the repro to it
+        same.runs.push(run.id);
+        same.report ??= report;
+        same.confidence = Math.min(0.99, same.confidence + 0.05);
+        same.credits += run.credits;
+        same.updatedAt = nowIso();
+        saveBug(paths, same);
+        flow = updateFlowMeta(flow, { status: 'confirmed', bug: same.id, fail_first: run.id });
+        lockFlow(paths, flow, 'capture');
+        const message = `Confirmed: Kane reproduced it, and it's the same bug as ${same.id}. The report and repro are linked to it.`;
+        emit(paths, 'bug', message, { bugId: same.id, origin: 'capture', duplicate: true }, job.id);
+        endJob(paths, job, 'failed', message, { outcome: 'confirmed', bugId: same.id });
+        return { ...base, outcome: 'confirmed', flow, run, bug: same, message };
+      }
       const bug: BugRecord = {
         id: nextBugId(paths),
         title: flow.title.replace(/^(the |a )/i, ''),
