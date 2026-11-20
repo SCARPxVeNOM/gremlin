@@ -18,6 +18,24 @@ import { nowIso, truncate } from './util.ts';
 /** The GitHub CLI; GREMLIN_GH_BIN points it elsewhere (tests use a stand-in). */
 export const GH_BIN = process.env.GREMLIN_GH_BIN ?? 'gh';
 
+/** The GitHub repo `origin` points at, in the form GH_REPO takes ("owner/repo", or "host/owner/repo" off github.com). */
+export function originRepo(cwd: string): string | undefined {
+  const r = spawnSync('git', ['remote', 'get-url', 'origin'], { cwd, encoding: 'utf8' });
+  const m = /^(?:https?:\/\/(?:[^@/]+@)?|ssh:\/\/git@|git@)([^/:]+)[/:]([^/]+)\/([^/]+?)(?:\.git)?\/?$/.exec((r.stdout ?? '').trim());
+  if (r.status !== 0 || !m) return undefined;
+  return m[1] === 'github.com' ? `${m[2]}/${m[3]}` : `${m[1]}/${m[2]}/${m[3]}`;
+}
+
+/**
+ * Run gh against the repo Gremlin pushes to. In a clone made by `gh repo fork --clone`, gh's own default is
+ * the upstream repo, so a pull request or an issue comment meant for the fork would land on someone else's
+ * project. A GH_REPO the user set still wins.
+ */
+export function runGh(args: string[], cwd: string, input?: string) {
+  const repo = process.env.GH_REPO || originRepo(cwd);
+  return spawnSync(GH_BIN, args, { cwd, encoding: 'utf8', input, env: repo ? { ...process.env, GH_REPO: repo } : process.env });
+}
+
 export interface BugReportInput {
   text: string;
   /** paste | github | sentry | support | chat | mcp */
@@ -54,7 +72,7 @@ interface DraftedRepro {
 
 /** Fetch a GitHub issue with the gh CLI. */
 export function readGithubIssue(ref: string, cwd: string): BugReportInput {
-  const r = spawnSync(GH_BIN, ['issue', 'view', ref, '--json', 'number,title,body,url,labels'], { cwd, encoding: 'utf8' });
+  const r = runGh(['issue', 'view', ref, '--json', 'number,title,body,url,labels'], cwd);
   if (r.status !== 0) throw new Error(`gh couldn't read issue ${ref}: ${r.stderr.trim() || 'is gh installed and signed in?'}`);
   const issue = JSON.parse(r.stdout);
   return { text: `${issue.title}\n\n${issue.body ?? ''}`, source: 'github', ref: `#${issue.number}`, url: issue.url };
@@ -288,6 +306,6 @@ export function commentOnIssue(project: Project, result: CaptureResult, ref: str
     if (k.shareUrl) lines.push(`**Evidence:** [Kane run](${k.shareUrl})`);
   }
   if (result.questions.length && !result.dispute) lines.push('', '**To reproduce, we need:**', ...result.questions.map((q) => `- ${q}`));
-  const r = spawnSync(GH_BIN, ['issue', 'comment', ref.replace(/^#/, ''), '--body', lines.join('\n')], { cwd: project.root, encoding: 'utf8' });
+  const r = runGh(['issue', 'comment', ref.replace(/^#/, ''), '--body', lines.join('\n')], project.root);
   return r.status === 0;
 }

@@ -18,7 +18,7 @@ writeFileSync(
 const fs = require('node:fs');
 const args = process.argv.slice(2);
 const stdin = args.includes('-') ? fs.readFileSync(0, 'utf8') : '';
-fs.appendFileSync(${JSON.stringify(ghLog)}, JSON.stringify({ args, stdin }) + '\\n');
+fs.appendFileSync(${JSON.stringify(ghLog)}, JSON.stringify({ args, stdin, repo: process.env.GH_REPO }) + '\\n');
 const [a, b] = args;
 if (a === 'repo' && b === 'view') console.log(JSON.stringify({ nameWithOwner: 'acme/shop', defaultBranchRef: { name: 'main' } }));
 else if (a === 'pr' && b === 'create') console.log('https://github.com/acme/shop/pull/43');
@@ -28,7 +28,7 @@ else if (a === 'issue' && b === 'list') console.log(process.env.FAKE_GH_ISSUES ?
 chmodSync(fakeGh, 0o755);
 process.env.GREMLIN_GH_BIN = fakeGh;
 
-const ghCalls = (): { args: string[]; stdin: string }[] =>
+const ghCalls = (): { args: string[]; stdin: string; repo?: string }[] =>
   existsSync(ghLog) ? readFileSync(ghLog, 'utf8').trim().split('\n').filter(Boolean).map((l) => JSON.parse(l)) : [];
 
 function git(cwd: string, ...args: string[]): string {
@@ -198,6 +198,12 @@ test('a bug the Breaker found becomes a pull request of its own, and only the fi
   const { saveBug, saveRun } = await import('../src/core/store.ts');
   const { openBugPr } = await import('../src/core/issues.ts');
   const p = shopRepo();
+  // a clone made by `gh repo fork --clone`: gh's own default is upstream, but the fix belongs on the fork
+  const bare = git(p.root, 'remote', 'get-url', 'origin');
+  git(p.root, 'remote', 'set-url', 'origin', 'https://github.com/me/shop.git');
+  git(p.root, 'remote', 'set-url', '--push', 'origin', bare);
+  git(p.root, 'remote', 'add', 'upstream', 'https://github.com/acme/shop.git');
+  git(p.root, 'config', 'remote.upstream.gh-resolved', 'base');
   const flow = saveFlow(p.paths, {
     title: 'A lowercase coupon code is accepted',
     type: 'adversarial',
@@ -243,4 +249,22 @@ test('a bug the Breaker found becomes a pull request of its own, and only the fi
   assert.match(create.stdin, /Breaker found this by attacking the app .*98% sure/);
   assert.doesNotMatch(create.stdin, /Fixes #/);
   assert.match(git(p.root, 'show', 'origin/gremlin/bug-001:server.js'), /toUpperCase/);
+  const [view, created] = ghCalls().slice(-2);
+  assert.deepEqual(view.args.slice(0, 3), ['repo', 'view', 'me/shop'], '`gh repo view` ignores GH_REPO, so the fork is named');
+  assert.equal(created.repo, 'me/shop', 'the pull request is opened on the fork it was pushed to, never upstream');
+});
+
+test('the repo gh works on is read from origin', async () => {
+  const { originRepo } = await import('../src/core/capture.ts');
+  const p = shopRepo();
+  assert.equal(originRepo(p.root), undefined, 'a remote that is not a GitHub repo leaves gh to its own default');
+  for (const [url, repo] of [
+    ['https://github.com/me/it-tools.git', 'me/it-tools'],
+    ['https://x-access-token:abc@github.com/me/it-tools', 'me/it-tools'],
+    ['git@github.com:me/it-tools.git', 'me/it-tools'],
+    ['https://ghe.acme.dev/team/shop.git', 'ghe.acme.dev/team/shop'],
+  ]) {
+    git(p.root, 'remote', 'set-url', 'origin', url);
+    assert.equal(originRepo(p.root), repo, url);
+  }
 });

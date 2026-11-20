@@ -3,7 +3,7 @@ import { copyFileSync, existsSync } from 'node:fs';
 import { extname, join, relative } from 'node:path';
 import { CONNECTORS } from './agent.ts';
 import { arenaMarkdown, runArena, type ArenaResult } from './arena.ts';
-import { commentOnIssue, GH_BIN, runCapture, type CaptureResult } from './capture.ts';
+import { commentOnIssue, originRepo, runCapture, runGh, type CaptureResult } from './capture.ts';
 import type { Project } from './config.ts';
 import { runFixer, type FixResult } from './fixer.ts';
 import { getFlow, type Flow } from './flow.ts';
@@ -65,7 +65,7 @@ interface GhIssue {
 }
 
 function gh(args: string[], cwd: string, input?: string): { ok: boolean; out: string; err: string } {
-  const r = spawnSync(GH_BIN, args, { cwd, encoding: 'utf8', input });
+  const r = runGh(args, cwd, input);
   return { ok: r.status === 0, out: (r.stdout ?? '').trim(), err: (r.stderr ?? '').trim() || (r.error?.message ?? '') };
 }
 
@@ -87,7 +87,9 @@ export function readIssue(project: Project, n: number): GhIssue {
 }
 
 function repoInfo(project: Project): { nameWithOwner: string; defaultBranch: string } {
-  const r = gh(['repo', 'view', '--json', 'nameWithOwner,defaultBranchRef'], project.root);
+  // `gh repo view` ignores GH_REPO and reads gh's default, which in a fork is upstream: name the repo
+  const target = process.env.GH_REPO || originRepo(project.root);
+  const r = gh(['repo', 'view', ...(target ? [target] : []), '--json', 'nameWithOwner,defaultBranchRef'], project.root);
   if (!r.ok) throw new Error(`gh couldn't read this repository: ${r.err}`);
   const j = JSON.parse(r.out);
   return { nameWithOwner: j.nameWithOwner, defaultBranch: j.defaultBranchRef?.name ?? 'main' };
