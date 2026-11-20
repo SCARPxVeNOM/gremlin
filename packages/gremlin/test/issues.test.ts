@@ -122,10 +122,12 @@ test('a proven fix is committed on a branch and opened as a pull request with Ka
   const url = openFixPr(p, { number: 42, title: 'Coupon rejected', url: 'https://github.com/acme/shop/issues/42' }, bug, red);
   assert.equal(url, 'https://github.com/acme/shop/pull/43');
 
-  // the user's checkout is back where it was, untouched
+  // the user's checkout is back where it was: the fix went to the branch, Gremlin's records stayed
   assert.equal(git(p.root, 'rev-parse', '--abbrev-ref', 'HEAD'), 'main');
-  assert.equal(git(p.root, 'status', '--porcelain'), '');
   assert.match(readFileSync(join(p.root, 'server.js'), 'utf8'), /coupons\[code\]/);
+  assert.ok(git(p.root, 'status', '--porcelain', '--untracked-files=all').split('\n').every((l) => l.startsWith('?? .gremlin/')));
+  assert.ok(existsSync(join(p.paths.bugs, 'BUG-001.json')), 'the bug list survives opening the pull request');
+  assert.ok(existsSync(flow.path));
 
   // the branch carries the fix, the regression flow, the bug and Kane's screenshots, but not local run artifacts
   const branch = 'gremlin/bug-001-issue-42';
@@ -184,13 +186,14 @@ test("uncommitted product changes block the loop, Gremlin's own records don't", 
 });
 
 test('a bug number held by an open fix branch is not handed out again', async () => {
-  const { reserveOpenFixBranches } = await import('../src/core/issues.ts');
-  const { nextBugId } = await import('../src/core/store.ts');
+  const { nextBugId, reserveOpenFixBranches } = await import('../src/core/store.ts');
   const p = shopRepo();
-  assert.equal(nextBugId(p.paths), 'BUG-001');
   git(p.root, 'push', '-q', 'origin', 'main:gremlin/bug-004-issue-9'); // an open PR's branch, not merged yet
-  reserveOpenFixBranches(p);
-  assert.equal(nextBugId(p.paths), 'BUG-005');
+  git(p.root, 'push', '-q', 'origin', 'main:gremlin/bug-002'); // and one for a bug the Breaker found
+  assert.equal(nextBugId(p.paths), 'BUG-005', 'Guard, Breaker and Capture number bugs past them on their own');
+  git(p.root, 'push', '-q', 'origin', 'main:gremlin/bug-007');
+  reserveOpenFixBranches(p.root);
+  assert.equal(nextBugId(p.paths), 'BUG-008', 'a long-running watcher refreshes what it knows');
 });
 
 test('a bug the Breaker found becomes a pull request of its own, and only the fix goes in', async () => {
@@ -267,4 +270,38 @@ test('the repo gh works on is read from origin', async () => {
     git(p.root, 'remote', 'set-url', 'origin', url);
     assert.equal(originRepo(p.root), repo, url);
   }
+});
+
+test('a fix made on an open fix branch stacks on it, and the bug list survives both pull requests', async () => {
+  const { saveFlow } = await import('../src/core/flow.ts');
+  const { saveBug, saveRun, listBugs } = await import('../src/core/store.ts');
+  const { openBugPr } = await import('../src/core/issues.ts');
+  const p = shopRepo();
+  const fixed = (id: string, file: string): BugRecord => {
+    const flow = saveFlow(p.paths, { title: `${id} stays fixed`, type: 'adversarial', start: '/', source: 'breaker', status: 'active', tags: ['checkout'], steps: ['Open the shop'], expect: ['It works'] });
+    const red = run(`RUN-20261120-12000${id.at(-1)}-aaaaaa`, 'failed', []);
+    const green = run(`RUN-20261120-12100${id.at(-1)}-bbbbbb`, 'passed', []);
+    saveRun(p.paths, red);
+    saveRun(p.paths, green);
+    const bug: BugRecord = { id, title: `${id} is broken`, origin: 'breaker', status: 'fixed', severity: 'high', confidence: 0.9, flowId: flow.id, tags: ['checkout'], runs: [red.id, green.id], attempts: [{ n: 1, at: '', agent: 'claude-code', promptFile: '', changedFiles: [file], outsideArea: [], blocked: [], runId: green.id, result: 'passed' }], createdAt: '', updatedAt: '', credits: 10 };
+    saveBug(p.paths, bug);
+    return bug;
+  };
+  fixed('BUG-001', 'server.js');
+  fixed('BUG-002', 'cart.js'); // found in the same hunt, fixed later
+  saveBug(p.paths, { ...listBugs(p.paths).find((b) => b.id === 'BUG-002')!, status: 'confirmed' });
+  writeFileSync(join(p.root, 'server.js'), 'const coupon = coupons[String(code).toUpperCase()];\n');
+  openBugPr(p, 'BUG-001');
+  assert.deepEqual(listBugs(p.paths).map((b) => b.id).sort(), ['BUG-001', 'BUG-002'], 'BUG-002 is still on the list');
+
+  // BUG-002 lives in the same code, so it's fixed on top of BUG-001's open branch
+  git(p.root, 'checkout', '-q', '-f', 'gremlin/bug-001');
+  saveBug(p.paths, { ...listBugs(p.paths).find((b) => b.id === 'BUG-002')!, status: 'fixed' });
+  writeFileSync(join(p.root, 'cart.js'), 'export const total = (items) => items.reduce((s, i) => s + i.price * i.qty, 0);\n');
+  openBugPr(p, 'BUG-002');
+  const create = ghCalls().findLast((c) => c.args[0] === 'pr' && c.args[1] === 'create')!;
+  assert.deepEqual(create.args.slice(2, 6), ['--base', 'gremlin/bug-001', '--head', 'gremlin/bug-002']);
+  assert.match(create.stdin, /^> Stacked on `gremlin\/bug-001`/);
+  assert.equal(git(p.root, 'rev-parse', '--abbrev-ref', 'HEAD'), 'gremlin/bug-001');
+  assert.equal(git(p.root, 'diff', '--name-only', 'gremlin/bug-001', 'origin/gremlin/bug-002', '--', '.', ':!.gremlin'), 'cart.js', 'the stacked PR carries only its own fix');
 });

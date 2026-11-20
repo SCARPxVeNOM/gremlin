@@ -11,7 +11,7 @@ import { ensureDir } from './paths.ts';
 import { redactText } from './redact.ts';
 import { silentReporter, type Reporter } from './runner.ts';
 import { uncommittedChanges } from './snapshot.ts';
-import { emit, getBug, getRun, reserveBugNumbers, type BugRecord, type RunRecord } from './store.ts';
+import { emit, getBug, getRun, reserveOpenFixBranches, type BugRecord, type RunRecord } from './store.ts';
 import { truncate } from './util.ts';
 
 /**
@@ -136,7 +136,7 @@ export async function runIssueLoop(project: Project, n: number, opts: IssueLoopO
   setStatusLabel(project, n, 'working');
   comment(project, n, `### 👹 Gremlin is on it\n\nKane CLI is trying to reproduce this in a real browser. If it can, ${openPr ? 'the coding agent will fix it and Kane will have to watch the fix work before a pull request opens' : 'the coding agent will fix it'}.`);
 
-  reserveOpenFixBranches(project);
+  reserveOpenFixBranches(project.root); // the watcher runs for hours: branches opened since count too
   const capture = await runCapture(project, { text: `${issue.title}\n\n${issue.body ?? ''}`, source: 'github', ref: `#${n}`, url: issue.url }, { reporter });
   commentOnIssue(project, capture, `#${n}`);
   const base = { issue: n, capture, bug: capture.bug };
@@ -203,15 +203,6 @@ export async function runIssueLoop(project: Project, n: number, opts: IssueLoopO
   return { ...base, fix, bug, prUrl, outcome: 'pr-opened', message: `${bug.id} fixed and proven by Kane. Pull request: ${prUrl}` };
 }
 
-/**
- * Open fix branches carry bug records the default branch doesn't have yet. Without this, two issues fixed
- * in parallel would both become BUG-001, and their pull requests would collide.
- */
-export function reserveOpenFixBranches(project: Project): void {
-  const heads = git(project.root, ['ls-remote', '--heads', 'origin', 'gremlin/bug-*']);
-  if (heads.ok) reserveBugNumbers([...heads.out.matchAll(/refs\/heads\/gremlin\/bug-(\d+)\b/g)].map((m) => Number(m[1])));
-}
-
 function lastPassingRun(project: Project, bug: BugRecord): RunRecord | undefined {
   const attempt = [...bug.attempts].reverse().find((a) => a.result === 'passed');
   return attempt?.runId ? getRun(project.paths, attempt.runId) : undefined;
@@ -242,6 +233,8 @@ export function openFixPr(project: Project, issue: Pick<GhIssue, 'number' | 'tit
   const prefix = mustGit(root, ['rev-parse', '--show-prefix']);
   const startBranch = git(root, ['symbolic-ref', '--quiet', '--short', 'HEAD']).out || mustGit(root, ['rev-parse', 'HEAD']);
   const branch = `gremlin/${bug.id.toLowerCase()}${issue ? `-issue-${issue.number}` : ''}`;
+  // made on top of a branch that's pushed but not merged (another fix in the same code): stack on it
+  const base = startBranch !== defaultBranch && git(root, ['ls-remote', '--exit-code', '--heads', 'origin', startBranch]).ok ? startBranch : defaultBranch;
   const title = issue ? `Fix #${issue.number}: ${bug.title}` : `Fix: ${bug.title}`;
 
   const before = keyScreenshot(project, failFirst, 'failure');
@@ -252,16 +245,19 @@ export function openFixPr(project: Project, issue: Pick<GhIssue, 'number' | 'tit
   if (after) copyFileSync(after, (shots.after = join(shotDir, `kane-after${extname(after)}`)));
 
   mustGit(root, ['checkout', '-B', branch]);
+  let committed = false;
   try {
     mustGit(root, ['add', '-A', '--', '.']);
     const who = git(root, ['config', 'user.email']).out ? [] : ['-c', 'user.name=Gremlin', '-c', 'user.email=gremlin@users.noreply.github.com'];
     mustGit(root, [...who, 'commit', '-m', title, '-m', `Reproduced and verified by Kane CLI through Gremlin (${bug.id}).${issue ? `\n\nFixes #${issue.number}` : ''}`]);
+    committed = true;
     const sha = mustGit(root, ['rev-parse', 'HEAD']);
     mustGit(root, ['push', '--force-with-lease', '-u', 'origin', branch]);
 
     const imageUrl = (file?: string) => (file ? `https://github.com/${nameWithOwner}/blob/${sha}/${prefix}${relative(root, file).split('\\').join('/')}?raw=true` : undefined);
-    const body = prBody(project, issue, bug, failFirst, { before: imageUrl(shots.before), after: imageUrl(shots.after) });
-    const pr = gh(['pr', 'create', '--base', defaultBranch, '--head', branch, '--title', title, '--body-file', '-'], root, body);
+    const stacked = base !== defaultBranch ? `> Stacked on \`${base}\`, which isn't merged yet, so this diff shows only this fix. Merge that one first.\n\n` : '';
+    const body = stacked + prBody(project, issue, bug, failFirst, { before: imageUrl(shots.before), after: imageUrl(shots.after) });
+    const pr = gh(['pr', 'create', '--base', base, '--head', branch, '--title', title, '--body-file', '-'], root, body);
     if (!pr.ok) {
       // a second run on the same issue: the branch was force-pushed, so the open PR already shows the new fix
       const existing = gh(['pr', 'view', branch, '--json', 'url', '--jq', '.url'], root);
@@ -271,6 +267,12 @@ export function openFixPr(project: Project, issue: Pick<GhIssue, 'number' | 'tit
     return pr.out.split('\n').filter(Boolean).at(-1)!;
   } finally {
     git(root, ['checkout', startBranch]);
+    // Gremlin's records (bugs, flows, the lock) went into that commit, and leaving the branch takes them out of
+    // the working tree: the bug list would empty and the next bug would reuse BUG-001. Put them back, uncommitted.
+    if (committed) {
+      git(root, ['checkout', branch, '--', '.gremlin']);
+      git(root, ['reset', '-q', '--', '.gremlin']);
+    }
   }
 }
 

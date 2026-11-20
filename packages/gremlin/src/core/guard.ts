@@ -3,6 +3,7 @@ import { failureBrief } from './brief.ts';
 import type { Project } from './config.ts';
 import { brokenContract, listFlows, type Flow } from './flow.ts';
 import { endJob, startJob, type Job } from './jobs.ts';
+import { isAutomationFault } from './kane.ts';
 import { describeRun, runFlow, silentReporter, type Reporter } from './runner.ts';
 import { scoreConfidence, scoreSeverity } from './severity.ts';
 import { gitChangedFiles } from './snapshot.ts';
@@ -165,9 +166,11 @@ function recordGuardFailure(project: Project, flow: Flow, run: RunRecord, job: J
     emit(paths, 'bug', regression ? `Regression caught: ${existing.id} is back` : `${existing.id} still failing`, { bugId: existing.id, regression, runId: run.id }, job.id);
     return { bug: existing, regression };
   }
+  const verdict = run.kane?.verdict;
   const bug: BugRecord = {
     id: nextBugId(paths),
-    title: `${flow.title} (broke)`,
+    // Kane's own name for what went wrong ("Cart badge remains nonzero after order confirmation") says more than the flow's
+    title: verdict?.title && !isAutomationFault(verdict) ? verdict.title : `${flow.title} (broke)`,
     origin: 'guard',
     status: 'confirmed',
     severity: scoreSeverity(run, { attack: flow.attack, tags: flow.tags }),

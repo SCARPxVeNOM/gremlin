@@ -1,3 +1,4 @@
+import { spawnSync } from 'node:child_process';
 import { existsSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import type { ArenaRecord } from './arena.ts';
@@ -102,22 +103,34 @@ export interface BugRecord {
   credits: number;
 }
 
-/** Bug numbers in use on branches that aren't merged yet (open Gremlin fix PRs), so they aren't handed out twice. */
-const takenElsewhere = new Set<number>();
+/**
+ * Bug numbers in use on fix branches that aren't merged yet (open Gremlin pull requests). Their records aren't in
+ * this checkout, so without asking origin a new bug would be numbered BUG-001 again, and its pull request branch
+ * would land on the open one's. Asked once per repo per process, or again when a long-running loop refreshes it.
+ */
+const openFixBranches = new Map<string, number[]>();
 
-export function reserveBugNumbers(numbers: number[]): void {
-  for (const n of numbers) takenElsewhere.add(n);
+export function reserveOpenFixBranches(root: string): number[] {
+  const r = spawnSync('git', ['ls-remote', '--heads', 'origin', 'gremlin/bug-*'], {
+    cwd: root,
+    encoding: 'utf8',
+    timeout: 15_000,
+    env: { ...process.env, GIT_TERMINAL_PROMPT: '0' },
+  });
+  const taken = r.status === 0 ? [...(r.stdout ?? '').matchAll(/refs\/heads\/gremlin\/bug-(\d+)\b/g)].map((m) => Number(m[1])) : [];
+  openFixBranches.set(root, taken);
+  return taken;
 }
 
 export function nextBugId(paths: ProjectPaths): string {
-  const n = existsSync(paths.bugs)
+  const local = existsSync(paths.bugs)
     ? readdirSync(paths.bugs)
         .map((f) => /^BUG-(\d+)\.json$/.exec(f)?.[1])
         .filter(Boolean)
         .map(Number)
-        .concat([...takenElsewhere])
-        .reduce((a, b) => Math.max(a, b), 0)
-    : Math.max(0, ...takenElsewhere);
+    : [];
+  const elsewhere = openFixBranches.get(paths.root) ?? reserveOpenFixBranches(paths.root);
+  const n = Math.max(0, ...local, ...elsewhere);
   return `BUG-${String(n + 1).padStart(3, '0')}`;
 }
 
