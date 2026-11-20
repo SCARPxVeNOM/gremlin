@@ -10,6 +10,13 @@
 </p>
 
 <p align="center">
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue" alt="MIT license"></a>
+  <img src="https://img.shields.io/badge/node-%3E%3D20-339933" alt="Node 20 or later">
+  <a href="https://github.com/SCARPxVeNOM/kiln-shop/pull/6"><img src="https://img.shields.io/badge/live%20run-issue%20%E2%86%92%20Kane--proven%20PR-6f42c1" alt="Live run: a GitHub issue became a pull request Kane proved"></a>
+</p>
+
+<p align="center">
+  <a href="#see-it-working">See it working</a> ·
   <a href="#one-bug-end-to-end">One bug, end to end</a> ·
   <a href="#quickstart">Quickstart</a> ·
   <a href="#try-it-on-kiln">Try it on the demo shop</a> ·
@@ -51,6 +58,21 @@ Breaker: a hostile user's attack ──────────┘              
                                     then to a human
 ```
 
+## See it working
+
+Each result below comes from real Kane CLI runs, and you can open every one of them.
+
+| | What happened | Evidence |
+| --- | --- | --- |
+| **Live in GitHub Actions** | An issue on the [kiln-shop](https://github.com/SCARPxVeNOM/kiln-shop) demo repo was labelled `gremlin`. Kane reproduced the failure but blamed the test. The agent disagreed, citing the code, and the repo owner settled it with the `gremlin:confirmed` label. Claude Code fixed it on the first attempt, Kane watched the same flow pass, and the Action opened a pull request. No human touched the code. | [Issue #5](https://github.com/SCARPxVeNOM/kiln-shop/issues/5) · [Action run](https://github.com/SCARPxVeNOM/kiln-shop/actions/runs/44783854641) · [PR #6](https://github.com/SCARPxVeNOM/kiln-shop/pull/6) |
+| **A real open-source app** | The Breaker attacked a fork of [IT Tools](https://github.com/CorentinTh/it-tools) (41k stars). Kane judged 3 failures to be product bugs. A human rejected one as working by design, and Claude Code fixed the other two, each proven by Kane. | [PR #1](https://github.com/SCARPxVeNOM/it-tools/pull/1) · [PR #2](https://github.com/SCARPxVeNOM/it-tools/pull/2) |
+| **Agent arena** | Three Claude Code models (Opus, Sonnet, Haiku) fixed the same search bug at once. Kane judged every fix in a browser, and the smallest one that passed became the pull request. | [Issue #3 → PR #4](https://github.com/SCARPxVeNOM/kiln-shop/pull/4) |
+| **A recorded session** | 43 Kane runs on the Kiln shop: 5 bugs found, 2 fixed and proven, and a regression caught by the Claude Code Stop hook. Every flow, run, screenshot and fix package is committed. | [`docs/demo-run`](docs/demo-run) |
+
+Each pull request carries Kane's runs before and after the fix, Kane's screenshots of both, and the regression test that
+now guards the bug. [`docs/proof.md`](docs/proof.md) walks through the live run step by step,
+and [`docs/architecture.md`](docs/architecture.md) shows how Gremlin is built.
+
 ## One bug, end to end
 
 BUG-005 from a real session on the [Kiln demo shop](examples/kiln), with Claude Code as the agent. Every run, screenshot
@@ -70,8 +92,9 @@ and prompt below is in [`docs/demo-run`](docs/demo-run).
    7 credits.
 5. **Kept fixed.** We then undid the fix by hand, the way a bad merge would, and asked a new Claude Code session for an
    unrelated accessibility fix. When Claude said it was done, the Stop hook had Kane replay the flows its change
-   touched. The coupon flow **failed**, so "done" was refused and Kane's evidence became Claude's next prompt. Claude
-   restored the fix, and Kane passed all 5 flows. Replaying that flow now costs 0 credits.
+   touched. The coupon flow **failed**, so "done" was refused and Kane's evidence became Claude's next prompt. Claude's
+   first try didn't bring the discount back, and Kane refused "done" a second time. On the next try Kane passed all
+   5 flows. Replaying that flow now costs 0 credits.
 
 The flow Claude Code drafted from the complaint. `fail_first` is the Kane run that watched it fail, and the flow is
 hashed into a lock file under `.gremlin/locks/`, so no agent can quietly weaken it later:
@@ -206,12 +229,11 @@ cd docs/demo-run && gremlin dash
 
 | Step | What happened | Kane credits |
 | --- | --- | --- |
-| Replay | 3 happy flows replayed from Kane's recordings | 0 |
-| Planted regression | `WELCOME10` quietly changed to 15%: the replay failed with *"a $9.60 discount on a $64.00 subtotal, rather than $6.40"* | 0 to catch |
+| Replay | 3 happy flows replayed from Kane's recordings | 6 |
 | Breaker hunt | Claude Code read `server.js` and proposed 5 attacks, the catalog added 3. 4 distinct bugs (1 critical, 3 high); 2 more attacks reproduced bugs already found and were folded in; 1 held and became a guard | 540 |
 | Capture | A complaint with an email and phone number was redacted, drafted into a repro, and failed twice under Kane: BUG-005 | 47 |
 | Fixer | Claude Code fixed BUG-005 and BUG-002 on the first attempt each. Kane passed each repro and its related flows; for BUG-002 that included the second attack that had reproduced it, which joined the regression library too | 29 |
-| Stop hook | We undid the coupon fix by hand, then asked a real Claude Code session for an unrelated accessibility fix. It was refused "done" because Kane's replay of the coupon flow failed. Kane's evidence became its next prompt; it restored the fix and Kane passed all 5 flows | 39 |
+| Stop hook | We undid the coupon fix by hand, then asked a real Claude Code session for an unrelated accessibility fix. It was refused "done" twice, because Kane's replay of the coupon flow failed both times. Each time Kane's evidence became its next prompt; then it restored the fix and Kane passed all 5 flows | 39 |
 | Final replay | 5 flows, all passing; Guard closed the reopened bug again | 0 |
 
 25 of the 43 runs cost nothing. The bugs, in Kane's own words:
@@ -226,11 +248,17 @@ cd docs/demo-run && gremlin dash
 
 ## Honest limits
 
-- **Kane can be wrong, and Gremlin doesn't overrule it.** Claude Code's attack plan pointed at `POST /api/orders` never
-  clearing the cart, a real bug nobody planted. Kane judged both runs an automation fault, so Gremlin did not file it.
-  That's why an agent can now dispute a triage, citing code: the flow is marked *Disputed* and a human settles it.
-- **Kiln is a demo.** Its bugs were planted (except that cart bug), and the regression in step 5 of
-  [One bug, end to end](#one-bug-end-to-end) was made by hand. Gremlin hasn't been run on a production codebase yet.
+- **Kane can be wrong, so a human has the last word.** Claude Code's attack plan pointed at `POST /api/orders` never
+  clearing the cart, a real bug nobody planted. Kane judged every run an automation fault, so Gremlin filed nothing.
+  The same bug came back as [kiln-shop issue #5](https://github.com/SCARPxVeNOM/kiln-shop/issues/5), and in CI Kane
+  blamed the test again. It was filed only after the repo owner sided with the agent's reading of the code, and Kane
+  then had to watch the fix pass ([PR #6](https://github.com/SCARPxVeNOM/kiln-shop/pull/6)). It goes the other way too:
+  Kane was 98% sure an IT Tools finding was a product bug, and a human rejected it because the tool only claims to handle
+  five characters. Gremlin never overrules Kane on its own.
+- **The test apps are small.** Kiln's bugs were planted (except that cart bug), and the regression in step 5 of
+  [One bug, end to end](#one-bug-end-to-end) was made by hand. IT Tools is a real codebase, but Gremlin ran on a fork on
+  one laptop, and none of its pull requests has been merged by a maintainer. Gremlin hasn't run on a team's production
+  codebase yet.
 - **Web only, for now.** The config and flows accept `ios` and `android`, but Gremlin only runs Kane's browser tests
   today; Kane's mobile runs aren't wired in.
 - **Capture needs a report Kane can reproduce.** If Kane follows the drafted flow and the app behaves, it isn't treated
@@ -276,6 +304,7 @@ The point of Gremlin is that **Kane's verdict always flows back to an agent**, a
   that attempt's evidence.
 - **Disagreements go to a human.** When Kane blames a flow but the agent that wrote it argues, citing code, that the
   product is at fault, nothing is filed: Kane's verdict stands, and the flow is marked *Disputed* for a human to settle.
+  On GitHub the human settles it with the `gremlin:confirmed` label, and Kane still has to fail the same step again.
 
 ### Guardrails
 
@@ -327,7 +356,7 @@ The point of Gremlin is that **Kane's verdict always flows back to an agent**, a
     lt-access-key: ${{ secrets.LT_ACCESS_KEY }}
 ```
 
-Guard comments a verdict table on the PR and uploads Kane's evidence packs as an artifact.
+The workflow it writes posts Guard's verdict table on the PR and uploads Kane's evidence packs as an artifact.
 
 `gremlin install issues` writes `.github/workflows/gremlin-issues.yml`, the issue autopilot. It runs when an issue gets
 the `gremlin` label (`sources.github.label`):
@@ -407,7 +436,10 @@ change.
 packages/gremlin     the CLI (gremlin-qa): core loops, Kane runner, agent connectors, hooks, MCP, dashboard server
 packages/dashboard   the dashboard: Vite, React 19, Tailwind v4, shadcn/ui
 examples/kiln        a demo shop with planted bugs and recorded happy flows
-action.yml           the Guard GitHub Action
+action.yml           the GitHub Action: Guard on pull requests, the issue autopilot on labelled issues
+docs/proof.md        every claim in this README, with the run, issue or pull request that backs it
+docs/architecture.md how Gremlin is built, in diagrams
+docs/demo-run        the recorded Kiln session: flows, Kane runs, bugs, fix packages, screenshots
 docs/SPEC.md         the product spec
 ```
 
