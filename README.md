@@ -343,7 +343,15 @@ the `gremlin` label (`sources.github.label`):
 
 Gremlin never pushes to your default branch: a proven fix always arrives as a pull request, so review stays with a
 human. Labels on the issue track where it is (`gremlin:working`, `gremlin:reproduced`, `gremlin:fix-proposed`,
-`gremlin:cant-reproduce`, `gremlin:needs-human`). GitHub doesn't start workflows for pull requests opened with
+`gremlin:cant-reproduce`, `gremlin:needs-human`).
+
+When Kane fails the repro but blames the test, and the agent cites code that says the product is at fault, Gremlin
+doesn't pick a side: it comments both cases and stops. A human who sides with the agent adds `gremlin:confirmed`.
+Gremlin then runs that exact repro again, files the bug on that person's word only if Kane fails it at the same step,
+and carries on as usual: the agent fixes it, Kane has to watch the fix pass, and the pull request names who broke the
+tie. Only Gremlin's own comment is read back, never a look-alike posted by someone without write access.
+
+GitHub doesn't start workflows for pull requests opened with
 `github.token`; set a `GREMLIN_GITHUB_TOKEN` secret if you want Guard to run on Gremlin's pull requests too.
 
 ## Configuration

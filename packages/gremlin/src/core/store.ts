@@ -105,6 +105,11 @@ export interface BugRecord {
    * Until `sha` is in HEAD's history, Guard reads a failing flow as the fix not being merged, not as a regression.
    */
   pr?: { url: string; branch: string; sha: string };
+  /**
+   * Kane watched the repro fail but blamed the test; a human read the agent's evidence and ruled it a product bug.
+   * Kane still has to pass the same flow before a fix counts.
+   */
+  confirmedBy?: { by: string; at: string; kane: string };
   credits: number;
 }
 

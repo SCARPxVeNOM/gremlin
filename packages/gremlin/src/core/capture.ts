@@ -59,7 +59,7 @@ export interface CaptureResult {
   dispute?: string;
 }
 
-interface DraftedRepro {
+export interface DraftedRepro {
   enough_detail: boolean;
   questions?: string[];
   title: string;
@@ -106,7 +106,18 @@ async function draftRepro(project: Project, report: string): Promise<DraftedRepr
   return extractJson<DraftedRepro>(res.output);
 }
 
-export async function runCapture(project: Project, input: BugReportInput, opts: { reporter?: Reporter; draft?: DraftedRepro } = {}): Promise<CaptureResult> {
+export interface CaptureOptions {
+  reporter?: Reporter;
+  /** Use this repro instead of asking the agent to draft one. */
+  draft?: DraftedRepro;
+  /**
+   * A human ruled that Kane misjudged this repro: a failure Kane blames on the test, at the step they saw it fail,
+   * is accepted on their word. Any other result is judged as usual.
+   */
+  confirmed?: { by: string; failedAt?: string };
+}
+
+export async function runCapture(project: Project, input: BugReportInput, opts: CaptureOptions = {}): Promise<CaptureResult> {
   const reporter = opts.reporter ?? silentReporter;
   const { paths } = project;
   const job = startJob(paths, 'capture', `Capture ${input.source}${input.ref ? ` ${input.ref}` : ''}`);
@@ -120,7 +131,7 @@ export async function runCapture(project: Project, input: BugReportInput, opts: 
   let app = { stop() {}, startedByGremlin: false };
 
   try {
-    reporter.info('Rewriting the report as a repro flow …');
+    reporter.info(opts.draft ? 'Using the given repro flow …' : 'Rewriting the report as a repro flow …');
     emit(paths, 'agent', 'Rewriting the report as a plain-English repro flow', {}, job.id);
     const draft = opts.draft ?? (await draftRepro(project, text));
     if (!draft) {
@@ -165,7 +176,8 @@ export async function runCapture(project: Project, input: BugReportInput, opts: 
     let run = await runFlow(project, flow, { purpose: 'capture', job: job.id, reporter });
     reporter.info(`  → ${describeRun(run)}`);
     let dispute: string | undefined;
-    if (shouldRevise(flow, run)) {
+    // a confirmed repro is the one the human read: rewriting it would leave them nothing to vouch for
+    if (!opts.confirmed && shouldRevise(flow, run)) {
       reporter.info('  Kane blamed the repro, not the product: asking the agent to revise it once …');
       const revision = await reviseFlow(project, flow, run, job.id);
       if (revision) {
@@ -177,8 +189,12 @@ export async function runCapture(project: Project, input: BugReportInput, opts: 
       }
     }
     const report = { source: input.source, ref: input.ref, url: input.url, text };
+    const blamedTest = run.status === 'failed' && isAutomationFault(run.kane?.verdict);
+    const overruled = blamedTest && opts.confirmed && (!opts.confirmed.failedAt || run.kane?.failedStep?.heading === opts.confirmed.failedAt);
+    const confirmedBy = overruled ? { by: opts.confirmed!.by, at: nowIso(), kane: run.kane?.verdict?.oneLiner ?? run.kane?.reason ?? 'the repro is at fault' } : undefined;
+    const why = confirmedBy ? `Kane reproduced the failure and blamed the test; ${confirmedBy.by} ruled it a product bug` : 'Kane reproduced the bug';
 
-    if (run.status === 'failed' && !isAutomationFault(run.kane?.verdict)) {
+    if (run.status === 'failed' && (!blamedTest || confirmedBy)) {
       const same = findDuplicateBug(paths, run, flow.title);
       if (same) {
         // users are reporting a bug Gremlin already has: link the report and the repro to it
@@ -186,11 +202,12 @@ export async function runCapture(project: Project, input: BugReportInput, opts: 
         same.report ??= report;
         same.confidence = Math.min(0.99, same.confidence + 0.05);
         same.credits += run.credits;
+        same.confirmedBy ??= confirmedBy;
         same.updatedAt = nowIso();
         saveBug(paths, same);
         flow = updateFlowMeta(flow, { status: 'confirmed', bug: same.id, fail_first: run.id });
         lockFlow(paths, flow, 'capture');
-        const message = `Confirmed: Kane reproduced it, and it's the same bug as ${same.id}. The report and repro are linked to it.`;
+        const message = `Confirmed: ${why}, and it's the same bug as ${same.id}. The report and repro are linked to it.`;
         emit(paths, 'bug', message, { bugId: same.id, origin: 'capture', duplicate: true }, job.id);
         endJob(paths, job, 'failed', message, { outcome: 'confirmed', bugId: same.id });
         return { ...base, outcome: 'confirmed', flow, run, bug: same, message };
@@ -209,6 +226,7 @@ export async function runCapture(project: Project, input: BugReportInput, opts: 
         contract: brokenContract(flow, project.config, { heading: run.kane?.failedStep?.heading, reason: run.kane?.reason }),
         reason: run.kane?.reason,
         verdict: run.kane?.verdict,
+        confirmedBy,
         runs: [run.id],
         attempts: [],
         createdAt: nowIso(),
@@ -219,7 +237,7 @@ export async function runCapture(project: Project, input: BugReportInput, opts: 
       flow = updateFlowMeta(flow, { status: 'confirmed', bug: bug.id, fail_first: run.id });
       lockFlow(paths, flow, 'capture');
       emit(paths, 'bug', `${bug.id}: ${bug.title}`, { bugId: bug.id, severity: bug.severity, origin: 'capture', status: 'confirmed' }, job.id);
-      const message = `Confirmed: Kane reproduced the bug. ${bug.id} is linked to ${input.ref ?? 'the report'}.`;
+      const message = `Confirmed: ${why}. ${bug.id} is linked to ${input.ref ?? 'the report'}.`;
       endJob(paths, job, 'failed', message, { outcome: 'confirmed', bugId: bug.id });
       return { ...base, outcome: 'confirmed', flow, run, bug, message };
     }
@@ -251,7 +269,9 @@ export async function runCapture(project: Project, input: BugReportInput, opts: 
     } else if (run.status === 'failed') {
       outcome = 'inconclusive';
       message = `Inconclusive: Kane judged the failure to be the repro's fault, not the product's (${run.kane?.verdict?.oneLiner ?? 'automation issue'}).`;
-      if (dispute) {
+      if (opts.confirmed) {
+        message += ` ${opts.confirmed.by} confirmed the failure at “${opts.confirmed.failedAt}”, but this time Kane failed at “${run.kane?.failedStep?.heading ?? 'an earlier step'}”, which that ruling doesn't cover.`;
+      } else if (dispute) {
         message += ` The agent disagrees: ${dispute}`;
         bug.questions = [`Kane and the agent disagree. Kane: ${run.kane?.verdict?.oneLiner ?? 'the repro is at fault'}. Agent: ${dispute} Which is right?`];
       }
@@ -272,12 +292,20 @@ export async function runCapture(project: Project, input: BugReportInput, opts: 
   }
 }
 
+/** The heading of Gremlin's comment when Kane and the agent disagree; a human settles it with CONFIRM_LABEL. */
+export const DISPUTE_HEADING = '### 👹 Gremlin: Kane and the agent disagree, so a human decides';
+export const CONFIRM_LABEL = { name: 'gremlin:confirmed', color: '5319e7', description: 'A human says Kane saw a real product bug: re-run the disputed repro and fix it' };
+
 /** Post Gremlin's result back on the GitHub issue the report came from. */
 export function commentOnIssue(project: Project, result: CaptureResult, ref: string): boolean {
   const k0 = result.run?.kane;
+  if (result.dispute) {
+    const l = CONFIRM_LABEL; // there before anyone needs it: a label has to exist to be added
+    runGh(['label', 'create', l.name, '--color', l.color, '--description', l.description, '--force'], project.root);
+  }
   const lines = result.dispute
     ? [
-        '### 👹 Gremlin: Kane and the agent disagree, so a human decides',
+        DISPUTE_HEADING,
         '',
         `Kane ran the repro and it failed, but Kane blamed the test, not the product: *${k0?.verdict?.oneLiner ?? k0?.reason ?? 'automation issue'}*`,
         '',
@@ -285,7 +313,7 @@ export function commentOnIssue(project: Project, result: CaptureResult, ref: str
         '',
         `> ${result.dispute.replace(/\n/g, '\n> ')}`,
         '',
-        'Gremlin never overrules Kane, so nothing was filed. If the agent is right, run `gremlin flows approve` on the repro to keep it as a test, then `gremlin fix`.',
+        `Gremlin never overrules Kane, so nothing was filed. If the agent is right, add the \`${CONFIRM_LABEL.name}\` label: Gremlin runs this exact repro again, and if Kane fails it at the same step, the agent fixes it and Kane has to watch the fix pass before a pull request opens.`,
         '',
       ]
     : [`### 👹 Gremlin: ${result.outcome === 'confirmed' ? 'reproduced' : result.outcome.replace('-', ' ')}`, '', result.message, ''];
@@ -293,6 +321,9 @@ export function commentOnIssue(project: Project, result: CaptureResult, ref: str
     lines.push('<details><summary>Repro flow (plain English, run by Kane CLI)</summary>', '');
     result.flow.steps.forEach((s, i) => lines.push(`${i + 1}. ${s}`));
     lines.push('', '**Expect**', ...result.flow.expect.map((e) => `- ${e}`), '', '</details>', '');
+    const { title, start, account, tags, steps, expect } = result.flow;
+    // the flow exactly as Kane ran it, for re-running it once a human confirms; "--" can't end the HTML comment early
+    lines.push(`<!-- gremlin-repro ${JSON.stringify({ title, start, account, tags, steps, expect }).replace(/--/g, '-\\u002d')} -->`, '');
   }
   if (result.run?.kane) {
     const k = result.run.kane;
@@ -308,4 +339,37 @@ export function commentOnIssue(project: Project, result: CaptureResult, ref: str
   if (result.questions.length && !result.dispute) lines.push('', '**To reproduce, we need:**', ...result.questions.map((q) => `- ${q}`));
   const r = runGh(['issue', 'comment', ref.replace(/^#/, ''), '--body', lines.join('\n')], project.root);
   return r.status === 0;
+}
+
+/**
+ * The repro from Gremlin's "Kane and the agent disagree" comment, and the step Kane failed it at. Read from the
+ * hidden copy when there is one; comments from before it existed give the steps and expectations they show.
+ */
+export function reproFromComment(body: string, fallbackTitle: string): { draft: DraftedRepro; failedAt?: string } | undefined {
+  if (!body.startsWith(DISPUTE_HEADING)) return undefined;
+  const failedAt = /^\*\*Failed at:\*\* (.+)$/m.exec(body)?.[1]?.trim();
+  const strings = (v: unknown) => (Array.isArray(v) ? v.filter((s): s is string => typeof s === 'string' && Boolean(s.trim())) : []);
+  const hidden = /<!-- gremlin-repro (\{.*\}) -->/.exec(body)?.[1];
+  if (hidden) {
+    try {
+      const f = JSON.parse(hidden);
+      const draft: DraftedRepro = {
+        enough_detail: true,
+        title: typeof f.title === 'string' && f.title.trim() ? f.title : fallbackTitle,
+        start: typeof f.start === 'string' && f.start.startsWith('/') ? f.start : '/',
+        account: typeof f.account === 'string' ? f.account : undefined,
+        tags: strings(f.tags),
+        steps: strings(f.steps),
+        expect: strings(f.expect),
+      };
+      if (draft.steps.length && draft.expect.length) return { draft, failedAt };
+    } catch {}
+  }
+  const shown = /<summary>Repro flow[^<]*<\/summary>([\s\S]*?)<\/details>/.exec(body)?.[1];
+  if (!shown) return undefined;
+  const [stepsPart, expectPart = ''] = shown.split('**Expect**');
+  const steps = [...stepsPart.matchAll(/^\d+\. (.+)$/gm)].map((m) => m[1].trim());
+  const expect = [...expectPart.matchAll(/^- (.+)$/gm)].map((m) => m[1].trim());
+  if (!steps.length || !expect.length) return undefined;
+  return { draft: { enough_detail: true, title: fallbackTitle, start: '/', steps, expect }, failedAt };
 }

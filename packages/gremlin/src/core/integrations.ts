@@ -1,6 +1,7 @@
 import { spawnSync } from 'node:child_process';
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
+import { CONFIRM_LABEL } from './capture.ts';
 import { ensureDir } from './paths.ts';
 
 /** How hooks and MCP configs should invoke Gremlin: the global binary if present, else this exact CLI. */
@@ -191,7 +192,8 @@ concurrency:
 
 jobs:
   autopilot:
-    if: github.event.label.name == '${opts.label}'
+    # ${CONFIRM_LABEL.name}: a human settles a disagreement between Kane and the agent
+    if: github.event.label.name == '${opts.label}' || github.event.label.name == '${CONFIRM_LABEL.name}'
     runs-on: ubuntu-latest
     timeout-minutes: 90
     steps:

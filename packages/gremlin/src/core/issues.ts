@@ -3,7 +3,7 @@ import { copyFileSync, existsSync, readFileSync, rmSync, writeFileSync } from 'n
 import { dirname, extname, join, relative } from 'node:path';
 import { CONNECTORS } from './agent.ts';
 import { arenaMarkdown, runArena, type ArenaResult } from './arena.ts';
-import { commentOnIssue, originRepo, runCapture, runGh, type CaptureResult } from './capture.ts';
+import { CONFIRM_LABEL, commentOnIssue, originRepo, reproFromComment, runCapture, runGh, type CaptureResult, type DraftedRepro } from './capture.ts';
 import type { Project } from './config.ts';
 import { runFixer, type FixResult } from './fixer.ts';
 import { getFlow, type Flow } from './flow.ts';
@@ -96,6 +96,29 @@ function repoInfo(project: Project): { nameWithOwner: string; defaultBranch: str
 }
 
 /** Swap Gremlin's status label on an issue, creating labels the repo doesn't have yet. */
+/**
+ * The repro Kane and the agent disagreed on, read back from Gremlin's own comment, and who added CONFIRM_LABEL. Only
+ * a comment Gremlin could have posted counts (the Actions bot, or someone with write access to the repo): anyone
+ * else could post a look-alike to hand Kane their own steps.
+ */
+export function disputedRepro(project: Project, issue: Pick<GhIssue, 'number' | 'title'>): { draft: DraftedRepro; failedAt?: string; by: string } | undefined {
+  const r = gh(['issue', 'view', String(issue.number), '--json', 'comments'], project.root);
+  if (!r.ok) return undefined;
+  const comments: { author?: { login?: string }; authorAssociation?: string; body?: string }[] = JSON.parse(r.out || '{}').comments ?? [];
+  const trusted = (c: (typeof comments)[number]) => /^github-actions(\[bot\])?$/.test(c.author?.login ?? '') || ['OWNER', 'MEMBER', 'COLLABORATOR'].includes(c.authorAssociation ?? '');
+  const found = comments
+    .filter(trusted)
+    .map((c) => reproFromComment(c.body ?? '', issue.title))
+    .filter((x) => x !== undefined)
+    .at(-1);
+  if (!found) return undefined;
+  const labeled = gh(
+    ['api', '--paginate', `repos/{owner}/{repo}/issues/${issue.number}/events`, '--jq', `[.[] | select(.event == "labeled" and .label.name == "${CONFIRM_LABEL.name}")] | last | .actor.login // empty`],
+    project.root,
+  );
+  return { ...found, by: (labeled.ok && labeled.out.split('\n').filter(Boolean).at(-1)) || 'a maintainer' };
+}
+
 function setStatusLabel(project: Project, n: number, key: LabelKey | undefined): void {
   const want = key ? ISSUE_LABELS[key].name : undefined;
   if (key) {
@@ -120,7 +143,9 @@ export async function runIssueLoop(project: Project, n: number, opts: IssueLoopO
   const reporter = opts.reporter ?? silentReporter;
   const openPr = opts.pr !== false;
   const issue = readIssue(project, n);
-  const done = issue.labels.find((l) => l.name === ISSUE_LABELS['fix-proposed'].name || l.name === ISSUE_LABELS['needs-human'].name);
+  // a human settling a disagreement between Kane and the agent is the one way back into an issue handed to a human
+  const confirmed = issue.labels.some((l) => l.name === CONFIRM_LABEL.name);
+  const done = issue.labels.find((l) => l.name === ISSUE_LABELS['fix-proposed'].name || (l.name === ISSUE_LABELS['needs-human'].name && !confirmed));
   if (done && !opts.force) {
     return { issue: n, outcome: 'skipped', message: `#${n} is already labeled ${done.name}. Use --force to run it again.` };
   }
@@ -132,12 +157,30 @@ export async function runIssueLoop(project: Project, n: number, opts: IssueLoopO
     }
   }
 
-  emit(project.paths, 'info', `Issue #${n} picked up: ${issue.title}`, { issue: n, url: issue.url });
+  const disputed = confirmed ? disputedRepro(project, issue) : undefined;
+  if (confirmed && !disputed) {
+    const message = `#${n} is labeled ${CONFIRM_LABEL.name}, but Gremlin hasn't posted a repro here that Kane and the agent disagree on, so there is nothing to confirm.`;
+    comment(project, n, `### 👹 Gremlin: nothing to confirm\n\n${message} Remove the label, and label the issue \`${project.config.sources.github?.label ?? 'gremlin'}\` to start from the report.`);
+    return { issue: n, outcome: 'error', message };
+  }
+
+  emit(project.paths, 'info', `Issue #${n} picked up: ${issue.title}`, { issue: n, url: issue.url, confirmedBy: disputed?.by });
   setStatusLabel(project, n, 'working');
-  comment(project, n, `### 👹 Gremlin is on it\n\nKane CLI is trying to reproduce this in a real browser. If it can, ${openPr ? 'the coding agent will fix it and Kane will have to watch the fix work before a pull request opens' : 'the coding agent will fix it'}.`);
+  const then = openPr ? 'the coding agent will fix it and Kane will have to watch the fix work before a pull request opens' : 'the coding agent will fix it';
+  comment(
+    project,
+    n,
+    disputed
+      ? `### 👹 Gremlin: ${disputed.by} sided with the agent, so Kane runs the disputed repro again\n\nIf Kane fails it at “${disputed.failedAt ?? 'the same step'}” again, the bug is filed on ${disputed.by}'s word, ${then}.`
+      : `### 👹 Gremlin is on it\n\nKane CLI is trying to reproduce this in a real browser. If it can, ${then}.`,
+  );
 
   reserveOpenFixBranches(project.root); // the watcher runs for hours: branches opened since count too
-  const capture = await runCapture(project, { text: `${issue.title}\n\n${issue.body ?? ''}`, source: 'github', ref: `#${n}`, url: issue.url }, { reporter });
+  const capture = await runCapture(
+    project,
+    { text: `${issue.title}\n\n${issue.body ?? ''}`, source: 'github', ref: `#${n}`, url: issue.url },
+    { reporter, draft: disputed?.draft, confirmed: disputed && { by: disputed.by, failedAt: disputed.failedAt } },
+  );
   commentOnIssue(project, capture, `#${n}`);
   const base = { issue: n, capture, bug: capture.bug };
 
@@ -393,6 +436,12 @@ export function prBody(
     `| 🟢 After | ${runLink(afterRun)} | Passed on attempt ${passing?.n ?? '?'} of ${tries} |`,
   ];
   if (passing?.relatedRuns?.length) lines.push(`| Related flows | ${passing.relatedRuns.map((id) => `\`${id}\``).join(', ')} | All passed: no side effects |`);
+  if (bug.confirmedBy) {
+    lines.push(
+      '',
+      `**A human broke the tie.** Kane watched the flow fail but blamed the test (*${truncate(bug.confirmedBy.kane, 200)}*). The agent read the code and disagreed, and ${bug.confirmedBy.by} ruled it a product bug with the \`${CONFIRM_LABEL.name}\` label. Kane still had to watch the same flow pass with the fix.`,
+    );
+  }
   if (bug.arena?.winner) {
     const rest = bug.arena.entries.filter((e) => e.result !== 'won');
     lines.push('', `**Agent arena:** ${bug.arena.entries.length} agents fixed this at the same time and Kane judged every fix. ${agent}'s was the smallest that passed. ${rest.map((e) => `${e.label}: ${e.result.replace('-', ' ')}${e.changedFiles.length ? ` (+${e.added} −${e.removed})` : ''}`).join(' · ')}.`);
