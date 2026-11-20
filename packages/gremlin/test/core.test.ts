@@ -239,14 +239,15 @@ test('behaviour contracts are checked in their own step at the end of every flow
   const flow = parseFlow(FLOW, path, 'happy/buy-a-mug'); // tagged checkout
   const onDisk = readFileSync(compileFlow(flow, p.config, p.paths).testMdPath, 'utf8');
 
-  assert.match(onDisk, /Verify that the cart is empty\.\n\n## Check the product rules\nVerify that every price shows a dollar sign and two decimals, like \$12\.00\.\n$/);
+  assert.match(onDisk, /Verify that the cart is empty\.\n\n## Product rule 1: Every price shows a dollar sign and two decimals, like \$12\.00\nWithout leaving this page, verify that every price shows a dollar sign and two decimals, like \$12\.00\. If nothing on this page falls under this rule, it holds\.\n$/);
   assert.doesNotMatch(onDisk, /HTML formatting/, 'a rule tagged search stays out of a checkout flow');
   assert.deepEqual(contractsFor({ tags: ['search'] }, p.config).length, 2);
 
-  // which rule broke is read from the assertion Kane quotes
-  const failed = (reason: string) => ({ heading: 'Check the product rules', reason });
+  // each rule is its own step, so the step that failed says which rule broke, whatever Kane's reason quotes
   const searchFlow = { tags: ['search'] };
-  assert.equal(brokenContract(searchFlow, p.config, failed('Checkpoint assertion failed: "nothing the shopper typed is shown as HTML formatting"')), 'Nothing the shopper typed is shown as HTML formatting');
-  assert.equal(brokenContract(searchFlow, p.config, failed('Checkpoint assertion failed: "every price shows a dollar sign and two decimals, like $12.00"')), 'Every price shows a dollar sign and two decimals, like $12.00');
+  const searchSteps = readFileSync(compileFlow({ ...flow, id: 'happy/search', tags: ['search'] }, p.config, p.paths).testMdPath, 'utf8');
+  assert.match(searchSteps, /## Product rule 1: Every price[^\n]*\n[^\n]*\n\n## Product rule 2: Nothing the shopper typed is shown as HTML formatting\n/);
+  assert.equal(brokenContract(searchFlow, p.config, { heading: 'Product rule 2: Nothing the shopper typed is shown as HTML formatting', reason: 'Checkpoint assertion failed: "the footer shows $60"' }), 'Nothing the shopper typed is shown as HTML formatting');
+  assert.equal(brokenContract(searchFlow, p.config, { heading: 'Product rule 1: Every price shows a dollar sign and two decimals, like $12.00' }), 'Every price shows a dollar sign and two decimals, like $12.00');
   assert.equal(brokenContract(searchFlow, p.config, { heading: 'Check the expected outcome', reason: 'x' }), undefined, "the flow's own expectations are not a contract");
 });

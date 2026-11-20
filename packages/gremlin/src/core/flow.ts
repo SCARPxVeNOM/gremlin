@@ -337,13 +337,14 @@ export function compileFlow(flow: Flow, config: GremlinConfig, paths: ProjectPat
   stepMap.push(`Expect: ${flow.expect.join(' / ')}`);
 
   // A separate step, so a broken contract is told apart from the flow's own expectations.
-  const rules = contractsFor(flow, config);
-  if (rules.length) {
+  // One step per rule: Kane stops at the first failed check, and a shared step would let one broken rule hide
+  // another and leave Gremlin guessing which one it was. The step's number names the rule.
+  contractsFor(flow, config).forEach((c, i) => {
     lines.push('');
-    lines.push(`## ${CONTRACT_STEP}`);
-    lines.push(rules.map((c) => `Verify that ${lowerFirst(c.rule.replace(/\.$/, ''))}.`).join('\n'));
-    stepMap.push(`Rules: ${rules.map((c) => c.rule).join(' / ')}`);
-  }
+    lines.push(`## ${CONTRACT_STEP} ${i + 1}: ${truncateRule(c.rule)}`);
+    lines.push(`Without leaving this page, verify that ${lowerFirst(c.rule.replace(/\.$/, ''))}. If nothing on this page falls under this rule, it holds.`);
+    stepMap.push(`Rule ${i + 1}: ${c.rule}`);
+  });
   lines.push('');
 
   const content = lines.join('\n');
@@ -359,23 +360,22 @@ function headingFor(step: string): string {
   return first.length > 64 ? first.slice(0, 63).trimEnd() + '…' : first.replace(/[.!?]$/, '');
 }
 
-export const CONTRACT_STEP = 'Check the product rules';
+export const CONTRACT_STEP = 'Product rule';
+
+function truncateRule(rule: string): string {
+  const r = rule.replace(/\.$/, '');
+  return r.length > 90 ? r.slice(0, 89).trimEnd() + '…' : r;
+}
 
 /** The behaviour contracts a flow is held to: every untagged rule, plus rules tagged with one of the flow's areas. */
 export function contractsFor(flow: Pick<Flow, 'tags'>, config: GremlinConfig): GremlinConfig['contracts'] {
   return config.contracts.filter((c) => !c.tags.length || c.tags.some((t) => flow.tags.includes(t.toLowerCase())));
 }
 
-/**
- * Which contract a failed run broke, if the failure was in the contract step. Kane quotes the assertion it
- * couldn't verify, so the rule is matched on its words; when the quote can't be matched, the first rule stands in.
- */
+/** Which contract a failed run broke: the failed step is the rule's own, and its number says which. */
 export function brokenContract(flow: Pick<Flow, 'tags'>, config: GremlinConfig, failed?: { heading?: string; reason?: string }): string | undefined {
-  if (!failed?.heading || !failed.heading.toLowerCase().includes(CONTRACT_STEP.toLowerCase())) return undefined;
-  const rules = contractsFor(flow, config);
-  const words = (s: string) => s.toLowerCase().replace(/[^a-z0-9$ ]+/g, ' ').replace(/\s+/g, ' ').trim();
-  const reason = words(failed.reason ?? '');
-  return (rules.find((c) => reason.includes(words(c.rule).slice(0, 40))) ?? rules[0])?.rule;
+  const n = new RegExp(`^${CONTRACT_STEP} (\\d+):`, 'i').exec(failed?.heading ?? '')?.[1];
+  return n ? contractsFor(flow, config)[Number(n) - 1]?.rule : undefined;
 }
 
 function lowerFirst(s: string): string {

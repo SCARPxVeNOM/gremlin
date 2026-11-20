@@ -152,13 +152,16 @@ function recordRegressionPass(project: Project, flow: Flow, run: RunRecord, job:
 /** A failing guarded flow either reopens the bug it was guarding (a regression) or opens a new one. */
 function recordGuardFailure(project: Project, flow: Flow, run: RunRecord, job: Job): { bug: BugRecord; regression: boolean } {
   const { paths } = project;
-  const existing = bugForFlow(paths, flow);
+  const contract = brokenContract(flow, project.config, { heading: run.kane?.failedStep?.heading, reason: run.kane?.reason });
+  const known = bugForFlow(paths, flow);
+  // the same flow breaking a different product rule is a different bug, not more evidence for this one
+  const existing = known && (!known.contract || !contract || known.contract === contract) ? known : undefined;
   if (existing) {
     const regression = existing.status === 'fixed';
     existing.status = 'confirmed';
     existing.runs.push(run.id);
     existing.failingStep = run.kane?.failedStep?.heading;
-    existing.contract = brokenContract(flow, project.config, { heading: run.kane?.failedStep?.heading, reason: run.kane?.reason });
+    existing.contract = contract ?? existing.contract;
     existing.reason = run.kane?.reason;
     existing.fixedAt = undefined;
     if (regression) existing.regressedAt = nowIso();
@@ -179,7 +182,7 @@ function recordGuardFailure(project: Project, flow: Flow, run: RunRecord, job: J
     attack: flow.attack,
     tags: flow.tags,
     failingStep: run.kane?.failedStep?.heading,
-    contract: brokenContract(flow, project.config, { heading: run.kane?.failedStep?.heading, reason: run.kane?.reason }),
+    contract,
     reason: run.kane?.reason,
     verdict: run.kane?.verdict,
     runs: [run.id],
