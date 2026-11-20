@@ -13,12 +13,14 @@ import { runFixer, verifyBug } from './core/fixer.ts';
 import { getFlow, lintFlow, listFlows, saveFlow, updateFlowMeta, type FlowType } from './core/flow.ts';
 import { guardBrief, guardMarkdown, runGuard } from './core/guard.ts';
 import { GuardrailError } from './core/guardrails.ts';
-import { installCi, installClaudeHooks, installMcp, installRules } from './core/integrations.ts';
+import { installCi, installClaudeHooks, installIssueCi, installMcp, installRules } from './core/integrations.ts';
+import { openBugPr, pendingIssues, runIssueLoop, type IssueLoopResult } from './core/issues.ts';
+import { defaultContenders, runArena } from './core/arena.ts';
 import { kaneStatus } from './core/kane.ts';
 import { describeRun, runFlow } from './core/runner.ts';
-import { getBug, getRun, listBugs, lockFlow, readLock, unlockFlow } from './core/store.ts';
+import { getBug, getRun, listBugs, lockFlow, readLock, saveBug, unlockFlow } from './core/store.ts';
 import { flowViews, summarize, weeklyMarkdown } from './core/summary.ts';
-import { ensureApp, isReachable } from './core/target.ts';
+import { ensureApp, foreignListener, isReachable } from './core/target.ts';
 import { startJob, endJob } from './core/jobs.ts';
 import { banner, bugLine, consoleReporter, g, runMark, sevColor, statusColor, table } from './ui.ts';
 
@@ -81,8 +83,14 @@ program
       line(Boolean(agent?.available()), `Coding agent: ${agent?.label ?? 'none'}`, `installed agents: ${detectAgents().join(', ') || 'none'}`);
       const up = await isReachable(pr.config.app.url);
       line(up || Boolean(pr.config.app.start), `App ${pr.config.app.url} ${up ? 'is up' : pr.config.app.start ? `is down (Gremlin will run \`${pr.config.app.start}\`)` : 'is down'}`, 'start it or set app.start');
+      const other = up ? foreignListener(pr.root, pr.config.app.url) : undefined;
+      if (other) line(false, `Another project is answering on that port: ${other}`, 'stop it, or give this app its own port');
       const flows = listFlows(pr.paths);
       line(flows.length > 0, `${flows.length} flows (${flows.filter((f) => f.status === 'active').length} active)`, 'gremlin init or gremlin flows new');
+      if (pr.config.contracts.length) {
+        console.log(`${g.ok('✓')} ${pr.config.contracts.length} behaviour contract${pr.config.contracts.length === 1 ? '' : 's'}, checked by Kane at the end of every flow they apply to`);
+        for (const c of pr.config.contracts) console.log(g.dim(`  · ${c.rule}${c.tags.length ? ` (${c.tags.join(', ')})` : ''}`));
+      }
       for (const f of flows) for (const i of lintFlow(f)) console.log(`  ${i.level === 'error' ? g.bad('!') : g.warn('·')} ${f.id}: ${i.message}`);
     }),
   );
@@ -209,6 +217,57 @@ program
     }),
   );
 
+function printIssueResult(r: IssueLoopResult) {
+  const head =
+    r.outcome === 'pr-opened' ? g.ok('✓ Pull request opened') : r.outcome === 'skipped' ? g.dim('· Skipped') : r.outcome === 'escalated' || r.outcome === 'error' ? g.bad(`✗ ${r.outcome}`) : g.warn(`● ${r.outcome}`);
+  console.log(`\n${head}  #${r.issue}: ${r.message}`);
+}
+
+program
+  .command('issue <number>')
+  .description('Issue autopilot: reproduce a GitHub issue with Kane, have your agent fix it, and open a pull request Kane has proven')
+  .option('--no-pr', 'stop once the fix is proven and leave it in the working tree')
+  .option('--attempts <n>', 'fix attempts before handing the issue to a human', (v) => parseInt(v, 10))
+  .option('--force', 'run again on an issue Gremlin has already finished with')
+  .option('--arena [agents]', 'let several agents compete for the fix; Kane picks the winner (default: every installed agent, or opus,sonnet,haiku)')
+  .action((num: string, opts) =>
+    main(async () => {
+      const pr = project();
+      banner('issue');
+      const arena = opts.arena ? (typeof opts.arena === 'string' ? opts.arena.split(',') : defaultContenders(detectAgents())) : undefined;
+      const r = await runIssueLoop(pr, parseInt(num.replace(/^#/, ''), 10), { pr: opts.pr, attempts: opts.attempts, force: opts.force, arena, reporter: consoleReporter() });
+      printIssueResult(r);
+      process.exitCode = ['pr-opened', 'reproduced', 'skipped', 'cant-reproduce', 'needs-detail'].includes(r.outcome) ? 0 : 1;
+    }),
+  );
+
+program
+  .command('watch')
+  .description('Watch GitHub for issues with the trigger label and run the issue autopilot on each one')
+  .option('--label <name>', 'trigger label (default: sources.github.label, or "gremlin")')
+  .option('--interval <seconds>', 'how often to check', (v) => parseInt(v, 10), 60)
+  .option('--once', 'check once and exit')
+  .action((opts) =>
+    main(async () => {
+      const pr = project();
+      banner('watch');
+      const label = opts.label ?? pr.config.sources.github?.label ?? 'gremlin';
+      console.log(g.dim(`Watching for open issues labeled "${label}" every ${opts.interval}s (Ctrl-C to stop)`));
+      for (;;) {
+        for (const n of pendingIssues(pr, label)) {
+          console.log(`\n▶ ${g.bold(`Issue #${n}`)}`);
+          try {
+            printIssueResult(await runIssueLoop(pr, n, { reporter: consoleReporter() }));
+          } catch (err) {
+            console.error(g.bad(`✗ #${n}: ${(err as Error).message}`));
+          }
+        }
+        if (opts.once) return;
+        await new Promise((r) => setTimeout(r, opts.interval * 1000));
+      }
+    }),
+  );
+
 program
   .command('fix <bug>')
   .description("Fixer: hand a bug and Kane's evidence to your coding agent, then prove the fix with Kane")
@@ -234,7 +293,51 @@ program
       });
       const color = r.outcome === 'fixed' ? g.ok : r.outcome === 'escalated' ? g.bad : g.warn;
       console.log(`\n${color(r.outcome === 'fixed' ? '✓ Fixed' : r.outcome)}  ${r.message}`);
+      if (r.outcome === 'fixed') console.log(g.dim(`Open a pull request with Kane's before and after: gremlin pr ${bug.id}`));
       process.exitCode = r.outcome === 'fixed' || r.outcome === 'suggested' ? 0 : 1;
+    }),
+  );
+
+program
+  .command('arena <bug>')
+  .description('Agent arena: several coding agents fix the same bug at once; Kane judges each fix and the smallest that passes wins')
+  .option('--agents <list>', 'contenders, e.g. claude-code:opus,claude-code:sonnet,codex (default: every installed agent, or opus,sonnet,haiku)')
+  .option('--no-related', 'skip replaying related flows for each fix')
+  .action((bugId: string, opts) =>
+    main(async () => {
+      const pr = project();
+      banner('arena');
+      const bug = getBug(pr.paths, bugId);
+      if (!bug) throw new Error(`No bug ${bugId}.`);
+      console.log(`${g.bold(bug.id)} ${sevColor(bug.severity)} ${bug.title}`);
+      const specs = opts.agents ? String(opts.agents).split(',') : defaultContenders(detectAgents());
+      const r = await runArena(pr, bug.id, specs, { related: opts.related, reporter: consoleReporter() });
+      console.log('');
+      table(
+        r.entries.map((e) => [
+          e.label,
+          e.durationS !== undefined ? `${Math.round(e.durationS)}s` : '–',
+          e.changedFiles.length ? `+${e.added} −${e.removed}` : '–',
+          e.result === 'won' ? g.ok('🏆 won') : e.result === 'passed' ? g.ok('passed') : e.result === 'flaky' ? g.warn('flaky') : g.bad(e.result),
+          e.note ?? '',
+        ]),
+        ['agent', 'time', 'lines', 'kane', 'note'],
+      );
+      console.log(`\n${r.outcome === 'fixed' ? g.ok('✓') : g.bad('✗')} ${r.message}`);
+      if (r.reportFile) console.log(g.dim(`Report: ${relative(pr.root, r.reportFile)}`));
+      if (r.outcome === 'fixed') console.log(g.dim(`Open a pull request with Kane's before and after: gremlin pr ${bug.id}`));
+      process.exitCode = r.outcome === 'fixed' ? 0 : 1;
+    }),
+  );
+
+program
+  .command('pr <bug>')
+  .description("Open a pull request for a fixed bug: the fix, its locked regression flow, and Kane's before and after")
+  .action((bugId: string) =>
+    main(async () => {
+      const pr = project();
+      const url = openBugPr(pr, bugId.toUpperCase());
+      console.log(`${g.ok('✓')} Pull request: ${url}`);
     }),
   );
 
@@ -405,6 +508,21 @@ flows
   );
 
 program
+  .command('reject <bug> [why...]')
+  .description("Close a bug that isn't one, and say why: the product does what it promises")
+  .action((id: string, why: string[]) =>
+    main(async () => {
+      const pr = project();
+      const b = getBug(pr.paths, id.toUpperCase());
+      if (!b) throw new Error(`No bug ${id}`);
+      b.status = 'rejected';
+      if (why.length) b.rejectedBecause = why.join(' ');
+      saveBug(pr.paths, b);
+      console.log(`${g.ok('✓')} ${b.id} rejected${b.rejectedBecause ? `: ${b.rejectedBecause}` : ''}`);
+    }),
+  );
+
+program
   .command('bugs [id]')
   .description('List bugs, or show one with its evidence and fix attempts')
   .option('--all', 'include fixed, rejected and unreproducible')
@@ -419,6 +537,7 @@ program
         if (b.report) console.log(`\nReport (${b.report.source}${b.report.ref ? ' ' + b.report.ref : ''}):\n${g.dim(b.report.text.slice(0, 600))}`);
         if (b.failingStep) console.log(`\nFailing step: ${b.failingStep}`);
         if (b.reason) console.log(`Kane: ${b.reason}`);
+        if (b.rejectedBecause) console.log(`Rejected: ${b.rejectedBecause}`);
         const last = getRun(pr.paths, b.runs[b.runs.length - 1]);
         if (last?.evidence?.networkFailures.length) console.log(`Network: ${last.evidence.networkFailures.map((n) => `${n.method} ${n.url} → ${n.status}`).join(', ')}`);
         if (last?.evidence?.failure?.screenshot) console.log(`Screenshot: ${relative(pr.root, join(pr.paths.evidence, last.id, last.evidence.failure.screenshot))}`);
@@ -496,7 +615,7 @@ program
 
 program
   .command('install <target>')
-  .description('Install a connector: claude | cursor | codex | gemini | ci')
+  .description('Install a connector: claude | cursor | codex | gemini | ci | issues')
   .action((target: string) =>
     main(async () => {
       const pr = project();
@@ -506,6 +625,12 @@ program
       else if (target === 'codex') done([installRules(pr.root, 'AGENTS.md')]);
       else if (target === 'gemini') done([installRules(pr.root, 'GEMINI.md')]);
       else if (target === 'ci') done([installCi(pr.root, { start: pr.config.app.start, url: pr.config.app.url })]);
+      else if (target === 'issues') {
+        done([installIssueCi(pr.root, { label: pr.config.sources.github?.label ?? 'gremlin', agent: pr.config.agent.name })]);
+        console.log(g.dim('  Add these repository secrets: LT_USERNAME and LT_ACCESS_KEY (TestMu AI), and for Claude Code either'));
+        console.log(g.dim('  ANTHROPIC_API_KEY or CLAUDE_CODE_OAUTH_TOKEN (from `claude setup-token`).'));
+        console.log(g.dim('  Optional: GREMLIN_GITHUB_TOKEN, so the pull requests Gremlin opens trigger your other workflows (GitHub ignores PRs opened by github.token).'));
+      }
       else throw new Error(`Unknown target ${target}`);
     }),
   );

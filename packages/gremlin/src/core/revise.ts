@@ -69,7 +69,7 @@ export async function reviseFlow(project: Project, flow: Flow, run: RunRecord, j
   if (lintFlow(draft).some((i) => i.level === 'error') || flowSafetyIssues(draft).length) return undefined;
   if (JSON.stringify(steps) === JSON.stringify(flow.steps) && JSON.stringify(expect) === JSON.stringify(flow.expect)) return undefined;
 
-  const dispute = typeof out.dispute === 'string' && out.dispute.trim() ? truncate(out.dispute.trim(), 600) : undefined;
+  const dispute = typeof out.dispute === 'string' && out.dispute.trim() ? truncate(out.dispute.trim(), 1200) : undefined;
   const note = `Revised after Kane's triage of ${run.id}: ${out.change ?? 'rewrote the steps so Kane can check them'}`;
   const notes = [flow.notes, note, dispute ? `${agent.label} disputes Kane's triage: ${dispute}` : ''].filter(Boolean).join('\n\n');
   writeFileSync(flow.path, serializeFlow({ ...flow, steps, expect, notes }));

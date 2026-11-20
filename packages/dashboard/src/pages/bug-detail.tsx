@@ -1,18 +1,19 @@
 import { Link, useParams } from 'react-router-dom'
-import { Ban, Bot, ChevronDown, FileCode2, History, Microscope, Quote, RotateCw, ShieldAlert, ShieldCheck, Wrench } from 'lucide-react'
+import { Ban, Bot, ChevronDown, FileCode2, History, Microscope, Quote, RotateCw, Scale, ShieldAlert, ShieldCheck, Swords, Trophy, Wrench } from 'lucide-react'
 import { toast } from 'sonner'
 import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Page, PageHeader, Code } from '@/components/page'
 import { FlowDoc } from '@/components/flow-doc'
 import { LiveFeed } from '@/components/live-feed'
 import { ConsoleNetwork, KaneVerdictCard, StepTimeline } from '@/components/evidence'
 import { Confidence, SeverityBadge, StatusBadge, StatusIcon } from '@/components/status'
 import { useQuery } from '@/lib/live'
-import { post, type Bug, type FlowView, type Run } from '@/lib/api'
+import { post, type ArenaEntry, type Bug, type FlowView, type Run } from '@/lib/api'
 import { credits, duration, timeAgo } from '@/lib/format'
 import { cn } from '@/lib/utils'
 import NotFound from './not-found'
@@ -142,6 +143,68 @@ function Attempt({ a, pkg }: { a: Bug['attempts'][number]; pkg?: string }) {
   )
 }
 
+const ARENA_RESULT: Record<ArenaEntry['result'], string> = {
+  won: 'Winner',
+  passed: 'Passed, larger fix',
+  flaky: 'Flaky under Kane',
+  failed: 'Kane failed it',
+  'broke-related': 'Broke a related flow',
+  'broke-startup': "App wouldn't start",
+  'no-change': 'Changed nothing',
+  'agent-error': 'Agent error',
+}
+
+function ArenaCard({ entries }: { entries: ArenaEntry[] }) {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Swords className="size-4" /> Agent arena
+        </CardTitle>
+        <CardDescription>
+          {entries.length} agents fixed this at the same time. Kane judged every fix in a real browser; the smallest that passed won.
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Agent</TableHead>
+              <TableHead className="text-right">Time</TableHead>
+              <TableHead className="text-right">Lines</TableHead>
+              <TableHead>Kane</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {entries.map((e) => (
+              <TableRow key={e.contender}>
+                <TableCell className="font-medium">
+                  <span className="inline-flex items-center gap-1.5">
+                    {e.result === 'won' && <Trophy className="text-good size-3.5" />}
+                    {e.label}
+                  </span>
+                </TableCell>
+                <TableCell className="text-muted-foreground text-right tabular-nums">{e.durationS !== undefined ? duration(e.durationS) : '–'}</TableCell>
+                <TableCell className="text-right font-mono text-xs tabular-nums">{e.changedFiles.length ? `+${e.added} −${e.removed}` : '–'}</TableCell>
+                <TableCell>
+                  {e.runId ? (
+                    <Link to={`/runs/${e.runId}`} className={cn('underline-offset-4 hover:underline', e.result === 'won' || e.result === 'passed' ? 'text-good' : e.result === 'flaky' ? 'text-serious' : 'text-critical')}>
+                      {ARENA_RESULT[e.result]}
+                    </Link>
+                  ) : (
+                    <span className="text-muted-foreground">{ARENA_RESULT[e.result]}</span>
+                  )}
+                  {e.note && <div className="text-muted-foreground mt-0.5 max-w-80 truncate text-xs">{e.note}</div>}
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </CardContent>
+    </Card>
+  )
+}
+
 export default function BugDetail() {
   const { id = '' } = useParams()
   const { data, error } = useQuery<BugDetailData>(`bugs/${id}`)
@@ -211,6 +274,33 @@ export default function BugDetail() {
 
       <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_24rem]">
         <div className="min-w-0 space-y-6">
+          {bug.status === 'rejected' && bug.rejectedBecause && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Not a bug</CardTitle>
+                <CardDescription>Kane saw the failure, and a human decided the product does what it promises.</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm">{bug.rejectedBecause}</p>
+              </CardContent>
+            </Card>
+          )}
+          {bug.contract && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Scale className="size-4" /> Broke a product rule
+                </CardTitle>
+                <CardDescription>The flow's own steps passed. Kane failed it on a behaviour contract from gremlin.config.yaml.</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm font-medium">{bug.contract}</p>
+              </CardContent>
+            </Card>
+          )}
+
+          {bug.arena && <ArenaCard entries={bug.arena.entries} />}
+
           {bug.report && (
             <Card>
               <CardHeader>

@@ -1,5 +1,6 @@
 import { existsSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
+import type { ArenaRecord } from './arena.ts';
 import type { EvidenceDigest } from './evidence.ts';
 import type { Flow, FlowType } from './flow.ts';
 import type { KaneRunResult } from './kane.ts';
@@ -27,7 +28,8 @@ export interface RunRecord {
   /** flaky = failed, then passed on the automatic retry */
   status: 'running' | 'passed' | 'failed' | 'error' | 'flaky';
   kane?: KaneRunResult;
-  retry?: { status: string; credits: number; logPath: string; evidencePack?: string };
+  /** The automatic re-run of a failure; `verdict` is the triage that wasn't chosen, when both attempts failed. */
+  retry?: { status: string; credits: number; logPath: string; evidencePack?: string; verdict?: KaneRunResult['verdict'] };
   evidence?: EvidenceDigest;
   credits: number;
 }
@@ -82,6 +84,10 @@ export interface BugRecord {
   report?: { source: string; ref?: string; url?: string; text: string };
   failingStep?: string;
   reason?: string;
+  /** The behaviour contract the failure broke, when it was one. */
+  contract?: string;
+  /** Why a human rejected it (the product works as intended, the attack expected too much). */
+  rejectedBecause?: string;
   verdict?: KaneRunResult['verdict'];
   runs: string[];
   attempts: FixAttempt[];
@@ -91,7 +97,16 @@ export interface BugRecord {
   fixedAt?: string;
   /** Set when Guard caught a fixed bug coming back. */
   regressedAt?: string;
+  /** Set when several agents competed to fix this bug and Kane judged them. */
+  arena?: ArenaRecord;
   credits: number;
+}
+
+/** Bug numbers in use on branches that aren't merged yet (open Gremlin fix PRs), so they aren't handed out twice. */
+const takenElsewhere = new Set<number>();
+
+export function reserveBugNumbers(numbers: number[]): void {
+  for (const n of numbers) takenElsewhere.add(n);
 }
 
 export function nextBugId(paths: ProjectPaths): string {
@@ -100,8 +115,9 @@ export function nextBugId(paths: ProjectPaths): string {
         .map((f) => /^BUG-(\d+)\.json$/.exec(f)?.[1])
         .filter(Boolean)
         .map(Number)
+        .concat([...takenElsewhere])
         .reduce((a, b) => Math.max(a, b), 0)
-    : 0;
+    : Math.max(0, ...takenElsewhere);
   return `BUG-${String(n + 1).padStart(3, '0')}`;
 }
 

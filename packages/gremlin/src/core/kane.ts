@@ -1,6 +1,7 @@
 import { spawn, spawnSync } from 'node:child_process';
-import { createWriteStream } from 'node:fs';
-import { dirname } from 'node:path';
+import { createWriteStream, readFileSync, unlinkSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { dirname, join } from 'node:path';
 import { ensureDir } from './paths.ts';
 import { round } from './util.ts';
 import { onInterrupt } from './interrupt.ts';
@@ -73,7 +74,60 @@ export interface KaneRunOptions {
   url?: string;
   author?: boolean;
   onEvent?: (e: KaneEvent) => void;
+  /** Another Gremlin on this machine has a Kane run in flight; this one waits for it. */
+  onWait?: (pid: number) => void;
   signal?: AbortSignal;
+}
+
+/**
+ * One Kane run at a time on a machine. Two kane-cli runs at once can end up in the same browser: in a real
+ * session, an arena judge's run reported a page that another project's run had open. A lock file holds the pid
+ * of the Gremlin whose run is in flight, and the next one waits its turn. A lock left by a process that died is
+ * taken over. Runs inside one process are never blocked by their own lock.
+ */
+
+function alive(pid: number): boolean {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch (err) {
+    return (err as NodeJS.ErrnoException).code === 'EPERM';
+  }
+}
+
+export async function kaneTurn(onWait?: (pid: number) => void, signal?: AbortSignal): Promise<() => void> {
+  const KANE_LOCK = process.env.GREMLIN_KANE_LOCK ?? join(tmpdir(), 'gremlin-kane.lock');
+  const me = String(process.pid);
+  let told = false;
+  while (!signal?.aborted) {
+    try {
+      writeFileSync(KANE_LOCK, me, { flag: 'wx' });
+      return () => {
+        try {
+          if (readFileSync(KANE_LOCK, 'utf8') === me) unlinkSync(KANE_LOCK);
+        } catch {}
+      };
+    } catch (err) {
+      if ((err as NodeJS.ErrnoException).code !== 'EEXIST') return () => {}; // no temp folder to lock in: don't block
+    }
+    let holder = 0;
+    try {
+      holder = Number(readFileSync(KANE_LOCK, 'utf8'));
+    } catch {
+      continue; // released between the two calls
+    }
+    if (holder === process.pid) return () => {};
+    if (!holder || !alive(holder)) {
+      try {
+        unlinkSync(KANE_LOCK);
+      } catch {}
+      continue;
+    }
+    if (!told) onWait?.(holder);
+    told = true;
+    await new Promise((r) => setTimeout(r, 2000));
+  }
+  return () => {};
 }
 
 export async function runKaneTest(opts: KaneRunOptions): Promise<KaneRunResult> {
@@ -185,13 +239,17 @@ export async function runKaneTest(opts: KaneRunOptions): Promise<KaneRunResult> 
     }
   };
 
+  const turn = await kaneTurn(opts.onWait, opts.signal);
   const exitCode = await new Promise<number>((resolve) => {
     const child = spawn(KANE_BIN, args, {
       cwd: opts.cwd,
       env: { ...process.env, NO_COLOR: '1', FORCE_COLOR: '0' },
       stdio: ['ignore', 'pipe', 'pipe'],
     });
-    const release = onInterrupt(() => child.kill('SIGTERM'));
+    const release = onInterrupt(() => {
+      child.kill('SIGTERM');
+      turn();
+    });
     let buf = '';
     child.stdout.on('data', (chunk: Buffer) => {
       log.write(chunk);
@@ -224,10 +282,12 @@ export async function runKaneTest(opts: KaneRunOptions): Promise<KaneRunResult> 
           ? `${KANE_BIN} not found. Install it: npm install -g @testmuai/kane-cli`
           : err.message,
       );
+      turn();
       resolve(127);
     });
     child.on('close', (code) => {
       release();
+      turn();
       if (timer) clearTimeout(timer);
       if (buf.trim().startsWith('{')) {
         try {

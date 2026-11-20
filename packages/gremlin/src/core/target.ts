@@ -1,4 +1,6 @@
-import { spawn, type ChildProcess } from 'node:child_process';
+import { spawn, spawnSync, type ChildProcess } from 'node:child_process';
+import { realpathSync } from 'node:fs';
+import { sep } from 'node:path';
 import type { Project } from './config.ts';
 import { onInterrupt } from './interrupt.ts';
 
@@ -17,10 +19,64 @@ export interface AppHandle {
   warned?: boolean;
 }
 
+/**
+ * A dev server from another project on the same port answers just as happily, and every flow would then test
+ * the wrong app. lsof names the processes listening on a local app's port and their working directories; one
+ * that is neither inside the repo nor above it (Docker's proxy runs from /) belongs to something else.
+ * Returns that process, or undefined when there is none or lsof can't tell.
+ */
+export function foreignListener(root: string, url: string): string | undefined {
+  let u: URL;
+  try {
+    u = new URL(url);
+  } catch {
+    return undefined;
+  }
+  if (!/^(localhost|127\.0\.0\.1|\[::1\]|0\.0\.0\.0)$/.test(u.hostname)) return undefined;
+  const port = u.port || (u.protocol === 'https:' ? '443' : '80');
+  const listening = spawnSync('lsof', ['-nP', `-iTCP:${port}`, '-sTCP:LISTEN', '-t'], { encoding: 'utf8' });
+  const pids = [...new Set((listening.stdout ?? '').split('\n').filter(Boolean))];
+  if (!pids.length) return undefined;
+  const cwds = spawnSync('lsof', ['-a', '-p', pids.join(','), '-d', 'cwd', '-Fpn'], { encoding: 'utf8' });
+  const real = (p: string) => {
+    try {
+      return realpathSync(p);
+    } catch {
+      return p;
+    }
+  };
+  const top = spawnSync('git', ['rev-parse', '--show-toplevel'], { cwd: root, encoding: 'utf8' });
+  const repo = real(top.status === 0 ? top.stdout.trim() : root);
+  const related = (dir: string) => dir === repo || dir.startsWith(repo + sep) || repo.startsWith(dir.endsWith(sep) ? dir : dir + sep);
+  let pid = '';
+  for (const line of (cwds.stdout ?? '').split('\n')) {
+    if (line.startsWith('p')) pid = line.slice(1);
+    else if (line.startsWith('n') && pid) {
+      const dir = real(line.slice(1));
+      if (related(dir)) continue;
+      const cmd = spawnSync('ps', ['-o', 'command=', '-p', pid], { encoding: 'utf8' }).stdout?.trim().slice(0, 100) || 'a process';
+      return `\`${cmd}\` (pid ${pid}), running in ${dir}`;
+    }
+  }
+  return undefined;
+}
+
+function refuseForeign(project: Project): void {
+  const other = foreignListener(project.root, project.config.app.url);
+  if (other) {
+    throw new Error(
+      `Something else is answering at ${project.config.app.url}: ${other}. Every flow would test that app instead of this one. Stop it, or give this app its own port (app.url and app.start in gremlin.config.yaml).`,
+    );
+  }
+}
+
 /** Make sure the target answers. Start it with app.start when it doesn't, and wait until ready. */
 export async function ensureApp(project: Project, log: (msg: string) => void = () => {}): Promise<AppHandle> {
   const { url, start } = project.config.app;
-  if (await isReachable(url)) return { startedByGremlin: false, stop: () => {} };
+  if (await isReachable(url)) {
+    refuseForeign(project);
+    return { startedByGremlin: false, stop: () => {} };
+  }
   if (!start) {
     throw new Error(`The app isn't reachable at ${url}. Start it, or set app.start in gremlin.config.yaml so Gremlin can.`);
   }
@@ -50,6 +106,13 @@ export async function ensureApp(project: Project, log: (msg: string) => void = (
       throw new Error(`\`${start}\` exited with code ${child.exitCode} before the app came up.${stderr.trim() ? `\n${stderr.trim().split('\n').slice(-12).join('\n')}` : ''}`);
     }
     if (await isReachable(url, 1500)) {
+      // the port can be shared: ours on ::1, another project's on 127.0.0.1, and the browser may reach either
+      try {
+        refuseForeign(project);
+      } catch (err) {
+        stop();
+        throw err;
+      }
       log(`App is up at ${url}`);
       return { startedByGremlin: true, stop };
     }

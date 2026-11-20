@@ -2,7 +2,7 @@ import { join, relative } from 'node:path';
 import type { Project } from './config.ts';
 import { resolveUrl } from './config.ts';
 import { likelyCode } from './codemap.ts';
-import type { Flow } from './flow.ts';
+import { brokenContract, contractsFor, type Flow } from './flow.ts';
 import { ALWAYS_PROTECTED } from './guardrails.ts';
 import type { BugRecord, RunRecord } from './store.ts';
 
@@ -19,6 +19,11 @@ export function failureBrief(project: Project, flow: Flow, run: RunRecord): stri
   flow.steps.forEach((s, i) => lines.push(`${i + 1}. ${s}`));
   lines.push('Expected:');
   flow.expect.forEach((e) => lines.push(`- ${e}`));
+  const rules = contractsFor(flow, project.config);
+  if (rules.length) {
+    lines.push('Product rules every flow is held to (behaviour contracts):');
+    rules.forEach((c) => lines.push(`- ${c.rule}`));
+  }
   lines.push('');
   lines.push(`### What Kane CLI saw in a real browser (run ${run.id})`);
   if (run.status === 'error') {
@@ -26,6 +31,8 @@ export function failureBrief(project: Project, flow: Flow, run: RunRecord): stri
     return lines.join('\n');
   }
   if (k?.failedStep) lines.push(`- Failed at: "${k.failedStep.heading}"`);
+  const broken = brokenContract(flow, project.config, { heading: k?.failedStep?.heading, reason: k?.reason });
+  if (broken) lines.push(`- The flow's own expectations held, but it broke a product rule: "${broken}". The fix belongs wherever that rule is broken, which may be shared code.`);
   if (k?.reason) lines.push(`- Kane's verdict: ${k.reason}`);
   if (k?.oneLiner && k.oneLiner !== k.reason) lines.push(`- In short: ${k.oneLiner}`);
   if (run.retry) lines.push(`- Re-run once to rule out flakiness: ${run.retry.status === 'failed' ? 'failed again (reproducible)' : run.retry.status}.`);

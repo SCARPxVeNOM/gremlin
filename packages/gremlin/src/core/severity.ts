@@ -43,7 +43,7 @@ export function scoreConfidence(run: RunRecord): number {
   if (isAutomationFault(v)) return Math.min(0.3, 1 - (v?.confidence ?? 0.7));
   let c = run.retry ? (run.retry.status === 'failed' ? 0.75 : 0.35) : 0.55;
   if (v?.confirmed) c = Math.max(c, v.confidence ?? 0.85);
-  else if (v?.family && /product/i.test(v.family)) c = Math.max(c, (v.confidence ?? 0.7) * 0.95);
+  else if (v?.family && /product|application/i.test(v.family)) c = Math.max(c, (v.confidence ?? 0.7) * 0.95);
   if (run.evidence?.networkFailures.some((n) => n.status >= 500)) c = Math.min(0.99, c + 0.1);
   return Math.round(c * 100) / 100;
 }

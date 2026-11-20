@@ -141,3 +141,20 @@ export function gitChangedFiles(root: string, base?: string): string[] {
   for (const f of git(root, ['ls-files', '--others', '--exclude-standard']).out.split('\n')) if (f) files.add(f);
   return [...files];
 }
+
+/**
+ * Changes under the project root that git would commit. Gremlin's own records (.gremlin/) don't count:
+ * a disputed repro from an earlier issue waits there for a human, and travels with the next fix.
+ */
+export function uncommittedChanges(root: string): string[] {
+  // raw -z output: trimming would eat the status column of the first entry
+  const r = spawnSync('git', ['status', '--porcelain=v1', '-z', '--untracked-files=all', '--', '.'], { cwd: root, encoding: 'utf8' });
+  if (r.status !== 0) throw new Error(`${root} isn't a git repository: Gremlin needs one to open pull requests and run the arena.`);
+  const entries = (r.stdout ?? '').split('\0').filter(Boolean);
+  const files: string[] = [];
+  for (let i = 0; i < entries.length; i++) {
+    files.push(entries[i].slice(3));
+    if (/^[RC]/.test(entries[i])) i++; // a rename or copy is followed by its old path
+  }
+  return files.filter((f) => !/(^|\/)\.gremlin\//.test(f));
+}

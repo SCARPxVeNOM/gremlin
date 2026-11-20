@@ -93,80 +93,86 @@ const FIX_TIMEOUT = 20 * 60_000;
 // ---------------------------------------------------------------------------
 // Claude Code
 
-const claudeCode: AgentConnector = {
-  name: 'claude-code',
-  label: 'Claude Code',
-  available: () => has('claude'),
-  async ask(prompt, cwd) {
-    const r = await exec('claude', ['-p', '--output-format', 'text', '--allowedTools', 'Read', 'Glob', 'Grep', 'LS'], {
-      cwd,
-      stdin: prompt,
-      timeoutMs: ASK_TIMEOUT,
-    });
-    return { ok: r.code === 0, output: r.stdout, summary: r.stdout.trim().slice(0, 400), durationS: r.durationS };
-  },
-  async fix(prompt, _promptFile, cwd, onActivity) {
-    let summary = '';
-    const r = await exec(
-      'claude',
-      [
-        '-p',
-        '--output-format',
-        'stream-json',
-        '--verbose',
-        '--permission-mode',
-        'acceptEdits',
-        '--allowedTools',
-        'Read',
-        'Edit',
-        'Write',
-        'MultiEdit',
-        'Glob',
-        'Grep',
-        'LS',
-        'Bash(node --check:*)',
-        'Bash(npm test:*)',
-        'Bash(npx tsc:*)',
-        'Bash(git diff:*)',
-        'Bash(git status:*)',
-        '--disallowedTools',
-        'Edit(.gremlin/**)',
-        'Write(.gremlin/**)',
-        'MultiEdit(.gremlin/**)',
-        'Edit(gremlin.config.yaml)',
-        'Write(gremlin.config.yaml)',
-      ],
-      {
+/** Claude Code, optionally pinned to a model ("sonnet", "opus", "haiku" or a full model id). */
+export function claudeCodeAgent(model?: string): AgentConnector {
+  const pin = model ? ['--model', model] : [];
+  return {
+    name: 'claude-code',
+    label: model ? `Claude Code (${model})` : 'Claude Code',
+    available: () => has('claude'),
+    async ask(prompt, cwd) {
+      const r = await exec('claude', ['-p', ...pin, '--output-format', 'text', '--allowedTools', 'Read', 'Glob', 'Grep', 'LS'], {
         cwd,
         stdin: prompt,
-        timeoutMs: FIX_TIMEOUT,
-        onLine: (line) => {
-          if (!line.startsWith('{')) return;
-          try {
-            const o = JSON.parse(line);
-            if (o.type === 'assistant') {
-              for (const c of o.message?.content ?? []) {
-                if (c.type === 'tool_use') {
-                  const input = c.input ?? {};
-                  const file = input.file_path ?? input.path ?? input.pattern ?? input.command ?? '';
-                  const kind = /Edit|Write/.test(c.name) ? 'edit' : c.name === 'Bash' ? 'run' : 'read';
-                  const shown = String(file).split(cwd + '/').join('').split(cwd).join('.');
-                  onActivity?.({ kind, detail: `${c.name} ${shown}`.trim() });
-                } else if (c.type === 'text' && c.text?.trim()) {
-                  onActivity?.({ kind: 'text', detail: c.text.trim().slice(0, 300) });
+        timeoutMs: ASK_TIMEOUT,
+      });
+      return { ok: r.code === 0, output: r.stdout, summary: r.stdout.trim().slice(0, 400), durationS: r.durationS };
+    },
+    async fix(prompt, _promptFile, cwd, onActivity) {
+      let summary = '';
+      const r = await exec(
+        'claude',
+        [
+          '-p',
+          ...pin,
+          '--output-format',
+          'stream-json',
+          '--verbose',
+          '--permission-mode',
+          'acceptEdits',
+          '--allowedTools',
+          'Read',
+          'Edit',
+          'Write',
+          'MultiEdit',
+          'Glob',
+          'Grep',
+          'LS',
+          'Bash(node --check:*)',
+          'Bash(npm test:*)',
+          'Bash(npx tsc:*)',
+          'Bash(git diff:*)',
+          'Bash(git status:*)',
+          '--disallowedTools',
+          'Edit(.gremlin/**)',
+          'Write(.gremlin/**)',
+          'MultiEdit(.gremlin/**)',
+          'Edit(gremlin.config.yaml)',
+          'Write(gremlin.config.yaml)',
+        ],
+        {
+          cwd,
+          stdin: prompt,
+          timeoutMs: FIX_TIMEOUT,
+          onLine: (line) => {
+            if (!line.startsWith('{')) return;
+            try {
+              const o = JSON.parse(line);
+              if (o.type === 'assistant') {
+                for (const c of o.message?.content ?? []) {
+                  if (c.type === 'tool_use') {
+                    const input = c.input ?? {};
+                    const file = input.file_path ?? input.path ?? input.pattern ?? input.command ?? '';
+                    const kind = /Edit|Write/.test(c.name) ? 'edit' : c.name === 'Bash' ? 'run' : 'read';
+                    const shown = String(file).split(cwd + '/').join('').split(cwd).join('.');
+                    onActivity?.({ kind, detail: `${c.name} ${shown}`.trim() });
+                  } else if (c.type === 'text' && c.text?.trim()) {
+                    onActivity?.({ kind: 'text', detail: c.text.trim().slice(0, 300) });
+                  }
                 }
+              } else if (o.type === 'result') {
+                summary = String(o.result ?? '').trim();
+                onActivity?.({ kind: 'done', detail: o.is_error ? 'agent reported an error' : 'agent finished' });
               }
-            } else if (o.type === 'result') {
-              summary = String(o.result ?? '').trim();
-              onActivity?.({ kind: 'done', detail: o.is_error ? 'agent reported an error' : 'agent finished' });
-            }
-          } catch {}
+            } catch {}
+          },
         },
-      },
-    );
-    return { ok: r.code === 0, output: r.stdout + r.stderr, summary: summary || r.stderr.trim().slice(-400), durationS: r.durationS };
-  },
-};
+      );
+      return { ok: r.code === 0, output: r.stdout + r.stderr, summary: summary || r.stderr.trim().slice(-400), durationS: r.durationS };
+    },
+  };
+}
+const claudeCode = claudeCodeAgent();
 
 // ---------------------------------------------------------------------------
 // Other agents: prompt as an argument, plain output
@@ -252,6 +258,19 @@ export function getAgent(config: GremlinConfig): AgentConnector | null {
   if (config.agent.name === 'none') return null;
   if (config.agent.name === 'custom') return customConnector(config);
   return CONNECTORS[config.agent.name] ?? null;
+}
+
+/**
+ * One contender for the arena, written "agent" or "agent:model" (e.g. "claude-code:sonnet", "codex").
+ * Only Claude Code takes a model here; other agents use whatever their own CLI is set to.
+ */
+export function contender(spec: string): AgentConnector {
+  const [name, model] = spec.split(':');
+  if (name === 'claude-code') return claudeCodeAgent(model || undefined);
+  const c = CONNECTORS[name];
+  if (!c) throw new Error(`Unknown agent "${name}". Use one of: ${Object.keys(CONNECTORS).join(', ')}.`);
+  if (model) throw new Error(`Choosing a model is supported for claude-code only, not ${name}.`);
+  return c;
 }
 
 export function detectAgents(): string[] {

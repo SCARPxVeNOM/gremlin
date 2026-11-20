@@ -4,7 +4,7 @@ import { getAgent, extractJson } from './agent.ts';
 import { ATTACKS, type AttackCategory, type AttackFlow } from './attacks.ts';
 import type { Project } from './config.ts';
 import { mapProduct, type ProductMap } from './discover.ts';
-import { listFlows, lintFlow, saveFlow, updateFlowMeta, type Flow } from './flow.ts';
+import { brokenContract, listFlows, lintFlow, saveFlow, updateFlowMeta, type Flow } from './flow.ts';
 import { flowSafetyIssues, GuardrailError } from './guardrails.ts';
 import { endJob, startJob, type Job } from './jobs.ts';
 import { isAutomationFault } from './kane.ts';
@@ -313,6 +313,7 @@ function triageFinding(project: Project, flow: Flow, run: RunRecord, p: PlannedA
     attack: p.attack,
     tags: flow.tags,
     failingStep: run.kane?.failedStep?.heading,
+    contract: brokenContract(flow, project.config, { heading: run.kane?.failedStep?.heading, reason: run.kane?.reason }),
     reason: run.kane?.reason,
     verdict: run.kane?.verdict,
     runs: [run.id],

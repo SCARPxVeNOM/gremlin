@@ -151,12 +151,88 @@ jobs:
 `;
 }
 
-export function installCi(root: string, opts: { start?: string; url: string }): Installed {
+function appInstallCommand(root: string): string {
   const lock = existsSync(join(root, 'package-lock.json'));
   const pnpm = existsSync(join(root, 'pnpm-lock.yaml'));
-  const installCmd = pnpm ? 'corepack enable && pnpm install --frozen-lockfile' : lock ? 'npm ci' : existsSync(join(root, 'package.json')) ? 'npm install' : 'true';
+  return pnpm ? 'corepack enable && pnpm install --frozen-lockfile' : lock ? 'npm ci' : existsSync(join(root, 'package.json')) ? 'npm install' : 'true';
+}
+
+export function installCi(root: string, opts: { start?: string; url: string }): Installed {
   const path = join(root, '.github', 'workflows', 'gremlin-guard.yml');
   ensureDir(dirname(path));
-  writeFileSync(path, ciWorkflow({ ...opts, installCmd }));
+  writeFileSync(path, ciWorkflow({ ...opts, installCmd: appInstallCommand(root) }));
   return { file: '.github/workflows/gremlin-guard.yml', what: 'CI: Guard on every pull request, verdict commented on the PR' };
+}
+
+// ---------------------------------------------------------------------------
+// CI: the issue autopilot, from a labeled issue to a pull request Kane has proven
+
+export function issueWorkflow(opts: { label: string; installCmd: string; agent: string }): string {
+  const agentNote =
+    opts.agent === 'claude-code' ? '' : `\n      # Gremlin is configured for ${opts.agent}; install its CLI and give it credentials here. The action installs Claude Code only.\n`;
+  return `name: Gremlin Issues
+
+# Label an issue "${opts.label}": Kane CLI reproduces it in a real browser, your coding agent
+# fixes it, Kane proves the fix, and a pull request opens with Kane's before and after.
+
+on:
+  issues:
+    types: [labeled]
+
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+
+concurrency:
+  group: gremlin-issues
+  cancel-in-progress: false
+
+jobs:
+  autopilot:
+    if: github.event.label.name == '${opts.label}'
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: \${{ secrets.GREMLIN_GITHUB_TOKEN || github.token }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - uses: browser-actions/setup-chrome@v1
+
+      - name: Install the app
+        run: ${opts.installCmd}
+${agentNote}
+      - name: Reproduce, fix and prove issue #\${{ github.event.issue.number }}
+        uses: SCARPxVeNOM/gremlin@main
+        with:
+          issue: \${{ github.event.issue.number }}
+          lt-username: \${{ secrets.LT_USERNAME }}
+          lt-access-key: \${{ secrets.LT_ACCESS_KEY }}
+          anthropic-api-key: \${{ secrets.ANTHROPIC_API_KEY }}
+          claude-code-oauth-token: \${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          github-token: \${{ secrets.GREMLIN_GITHUB_TOKEN || github.token }}
+
+      - name: Keep Kane's evidence packs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gremlin-issue-\${{ github.event.issue.number }}
+          path: |
+            .gremlin/evidence/
+            .gremlin/bugs/
+          if-no-files-found: ignore
+`;
+}
+
+export function installIssueCi(root: string, opts: { label: string; agent: string }): Installed {
+  const path = join(root, '.github', 'workflows', 'gremlin-issues.yml');
+  ensureDir(dirname(path));
+  writeFileSync(path, issueWorkflow({ ...opts, installCmd: appInstallCommand(root) }));
+  return { file: '.github/workflows/gremlin-issues.yml', what: `CI: label an issue "${opts.label}" and Gremlin opens a pull request Kane has proven` };
 }

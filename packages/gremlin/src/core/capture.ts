@@ -2,7 +2,7 @@ import { spawnSync } from 'node:child_process';
 import { extractJson, getAgent } from './agent.ts';
 import type { Project } from './config.ts';
 import { mapProduct } from './discover.ts';
-import { lintFlow, saveFlow, updateFlowMeta, type Flow } from './flow.ts';
+import { brokenContract, lintFlow, saveFlow, updateFlowMeta, type Flow } from './flow.ts';
 import { flowSafetyIssues } from './guardrails.ts';
 import { endJob, startJob, type Job } from './jobs.ts';
 import { isAutomationFault } from './kane.ts';
@@ -14,6 +14,9 @@ import { scoreConfidence, scoreSeverity } from './severity.ts';
 import { emit, lockFlow, nextBugId, saveBug, type BugRecord, type RunRecord } from './store.ts';
 import { ensureApp, isReachable } from './target.ts';
 import { nowIso, truncate } from './util.ts';
+
+/** The GitHub CLI; GREMLIN_GH_BIN points it elsewhere (tests use a stand-in). */
+export const GH_BIN = process.env.GREMLIN_GH_BIN ?? 'gh';
 
 export interface BugReportInput {
   text: string;
@@ -34,6 +37,8 @@ export interface CaptureResult {
   bug?: BugRecord;
   questions: string[];
   message: string;
+  /** Kane blamed the repro, and the agent argues, citing code, that the product is at fault. */
+  dispute?: string;
 }
 
 interface DraftedRepro {
@@ -49,7 +54,7 @@ interface DraftedRepro {
 
 /** Fetch a GitHub issue with the gh CLI. */
 export function readGithubIssue(ref: string, cwd: string): BugReportInput {
-  const r = spawnSync('gh', ['issue', 'view', ref, '--json', 'number,title,body,url,labels'], { cwd, encoding: 'utf8' });
+  const r = spawnSync(GH_BIN, ['issue', 'view', ref, '--json', 'number,title,body,url,labels'], { cwd, encoding: 'utf8' });
   if (r.status !== 0) throw new Error(`gh couldn't read issue ${ref}: ${r.stderr.trim() || 'is gh installed and signed in?'}`);
   const issue = JSON.parse(r.stdout);
   return { text: `${issue.title}\n\n${issue.body ?? ''}`, source: 'github', ref: `#${issue.number}`, url: issue.url };
@@ -183,6 +188,7 @@ export async function runCapture(project: Project, input: BugReportInput, opts: 
         tags: flow.tags,
         report,
         failingStep: run.kane?.failedStep?.heading,
+        contract: brokenContract(flow, project.config, { heading: run.kane?.failedStep?.heading, reason: run.kane?.reason }),
         reason: run.kane?.reason,
         verdict: run.kane?.verdict,
         runs: [run.id],
@@ -239,7 +245,7 @@ export async function runCapture(project: Project, input: BugReportInput, opts: 
     updateFlowMeta(flow, { bug: bug.id });
     emit(paths, 'bug', `${bug.id}: ${message}`, { bugId: bug.id, status: bug.status, origin: 'capture' }, job.id);
     endJob(paths, job, 'done', message, { outcome, bugId: bug.id });
-    return { ...base, outcome, flow, run, bug, questions: bug.questions ?? [], message };
+    return { ...base, outcome, flow, run, bug, questions: bug.questions ?? [], message, dispute: outcome === 'inconclusive' ? dispute : undefined };
   } catch (err) {
     endJob(paths, job, 'error', (err as Error).message);
     throw err;
@@ -250,7 +256,21 @@ export async function runCapture(project: Project, input: BugReportInput, opts: 
 
 /** Post Gremlin's result back on the GitHub issue the report came from. */
 export function commentOnIssue(project: Project, result: CaptureResult, ref: string): boolean {
-  const lines = [`### 👹 Gremlin: ${result.outcome === 'confirmed' ? 'reproduced' : result.outcome.replace('-', ' ')}`, '', result.message, ''];
+  const k0 = result.run?.kane;
+  const lines = result.dispute
+    ? [
+        '### 👹 Gremlin: Kane and the agent disagree, so a human decides',
+        '',
+        `Kane ran the repro and it failed, but Kane blamed the test, not the product: *${k0?.verdict?.oneLiner ?? k0?.reason ?? 'automation issue'}*`,
+        '',
+        `The agent that wrote the repro read the code and disagrees:`,
+        '',
+        `> ${result.dispute.replace(/\n/g, '\n> ')}`,
+        '',
+        'Gremlin never overrules Kane, so nothing was filed. If the agent is right, run `gremlin flows approve` on the repro to keep it as a test, then `gremlin fix`.',
+        '',
+      ]
+    : [`### 👹 Gremlin: ${result.outcome === 'confirmed' ? 'reproduced' : result.outcome.replace('-', ' ')}`, '', result.message, ''];
   if (result.flow) {
     lines.push('<details><summary>Repro flow (plain English, run by Kane CLI)</summary>', '');
     result.flow.steps.forEach((s, i) => lines.push(`${i + 1}. ${s}`));
@@ -260,9 +280,14 @@ export function commentOnIssue(project: Project, result: CaptureResult, ref: str
     const k = result.run.kane;
     if (k.failedStep) lines.push(`**Failed at:** ${k.failedStep.heading}`);
     if (k.reason) lines.push(`**Kane:** ${k.reason}`);
+    const other = result.run?.retry?.verdict;
+    if (other && k.verdict && other.family !== k.verdict.family) {
+      const pct = (v: typeof other) => (v?.confidence !== undefined ? ` (${Math.round(v.confidence * 100)}%)` : '');
+      lines.push(`**Kane's two runs disagreed:** ${k.verdict.family}${pct(k.verdict)} on one, ${other.family}${pct(other)} on the other. The more confident verdict stands.`);
+    }
     if (k.shareUrl) lines.push(`**Evidence:** [Kane run](${k.shareUrl})`);
   }
-  if (result.questions.length) lines.push('', '**To reproduce, we need:**', ...result.questions.map((q) => `- ${q}`));
-  const r = spawnSync('gh', ['issue', 'comment', ref.replace(/^#/, ''), '--body', lines.join('\n')], { cwd: project.root, encoding: 'utf8' });
+  if (result.questions.length && !result.dispute) lines.push('', '**To reproduce, we need:**', ...result.questions.map((q) => `- ${q}`));
+  const r = spawnSync(GH_BIN, ['issue', 'comment', ref.replace(/^#/, ''), '--body', lines.join('\n')], { cwd: project.root, encoding: 'utf8' });
   return r.status === 0;
 }

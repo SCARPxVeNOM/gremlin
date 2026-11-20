@@ -201,3 +201,52 @@ test('after a change, an app Gremlin started is restarted, and a broken startup 
     app.stop();
   }
 });
+
+test("when Kane's two triages of a failure disagree, the more confident one speaks for the run", async () => {
+  const { stronger } = await import('../src/core/runner.ts');
+  const attempt = (family?: string, confidence?: number, status: 'failed' | 'error' = 'failed') =>
+    ({ status, errors: [], verdict: family ? { confirmed: false, family, confidence } : undefined }) as any;
+  const blamesTest = attempt('automation_bug', 0.86);
+  const blamesApp = attempt('application_issue', 0.97);
+  assert.equal(stronger(blamesTest, blamesApp), blamesApp, 'the retry was surer it is a product bug');
+  assert.equal(stronger(blamesApp, blamesTest), blamesApp, 'order does not matter');
+  assert.equal(stronger(attempt(), blamesTest), blamesTest, 'a verdict beats none');
+  assert.equal(stronger(blamesTest, attempt()), blamesTest);
+  assert.equal(stronger(blamesTest, attempt('application_issue', 0.99, 'error')), blamesTest, "a run that couldn't execute has no say");
+});
+
+test('steps an agent numbered itself are stored without the extra number', async () => {
+  const { saveFlow } = await import('../src/core/flow.ts');
+  const p = project({});
+  const f = saveFlow(p.paths, { title: 'A coupon applies', type: 'regression', source: 'capture:paste', steps: ['1. Click "Ember Vase"', '2) Click "Add to cart"', '- Go to checkout'], expect: ['- A discount is shown'] });
+  assert.deepEqual(f.steps, ['Click "Ember Vase"', 'Click "Add to cart"', 'Go to checkout']);
+  assert.deepEqual(f.expect, ['A discount is shown']);
+  assert.match(readFileSync(f.path, 'utf8'), /\n1\. Click "Ember Vase"\n2\. Click "Add to cart"/);
+});
+
+test('behaviour contracts are checked in their own step at the end of every flow they apply to', async () => {
+  const { brokenContract, contractsFor } = await import('../src/core/flow.ts');
+  const p = project({
+    app: { name: 'Kiln', url: 'http://localhost:4000' },
+    contracts: [
+      'Every price shows a dollar sign and two decimals, like $12.00',
+      { rule: 'Nothing the shopper typed is shown as HTML formatting', tags: ['search'] },
+    ],
+  });
+  mkdirSync(join(p.paths.flows, 'happy'), { recursive: true });
+  const path = join(p.paths.flows, 'happy', 'buy-a-mug.md');
+  writeFileSync(path, FLOW);
+  const flow = parseFlow(FLOW, path, 'happy/buy-a-mug'); // tagged checkout
+  const onDisk = readFileSync(compileFlow(flow, p.config, p.paths).testMdPath, 'utf8');
+
+  assert.match(onDisk, /Verify that the cart is empty\.\n\n## Check the product rules\nVerify that every price shows a dollar sign and two decimals, like \$12\.00\.\n$/);
+  assert.doesNotMatch(onDisk, /HTML formatting/, 'a rule tagged search stays out of a checkout flow');
+  assert.deepEqual(contractsFor({ tags: ['search'] }, p.config).length, 2);
+
+  // which rule broke is read from the assertion Kane quotes
+  const failed = (reason: string) => ({ heading: 'Check the product rules', reason });
+  const searchFlow = { tags: ['search'] };
+  assert.equal(brokenContract(searchFlow, p.config, failed('Checkpoint assertion failed: "nothing the shopper typed is shown as HTML formatting"')), 'Nothing the shopper typed is shown as HTML formatting');
+  assert.equal(brokenContract(searchFlow, p.config, failed('Checkpoint assertion failed: "every price shows a dollar sign and two decimals, like $12.00"')), 'Every price shows a dollar sign and two decimals, like $12.00');
+  assert.equal(brokenContract(searchFlow, p.config, { heading: 'Check the expected outcome', reason: 'x' }), undefined, "the flow's own expectations are not a contract");
+});

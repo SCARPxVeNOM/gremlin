@@ -35,7 +35,7 @@ export interface FixResult {
   packageFile?: string;
 }
 
-function lastFailingRun(project: Project, bug: BugRecord): RunRecord | undefined {
+export function lastFailingRun(project: Project, bug: BugRecord): RunRecord | undefined {
   for (const id of [...bug.runs].reverse()) {
     const r = getRun(project.paths, id);
     if (r && (r.status === 'failed' || r.status === 'error')) return r;
@@ -222,26 +222,8 @@ export async function runFixer(project: Project, bugId: string, opts: FixOptions
         continue;
       }
 
-      // Accepted: the flow joins the regression library and Guard replays it from now on.
       attempt.result = 'passed';
-      bug.status = 'fixed';
-      bug.fixedAt = nowIso();
-      saveBug(paths, bug);
-      const failFirst = flow.fail_first ?? bug.runs[0];
-      flow =
-        flow.type === 'regression'
-          ? updateFlowMeta(flow, { status: 'active', fail_first: failFirst })
-          : moveFlow(paths, flow, 'regression', { status: 'active', fail_first: failFirst, bug: bug.id });
-      lockFlow(paths, flow, 'fixer');
-      // Other repros of this bug (a captured report, a second attack) passed too: they guard it from now on as well.
-      for (const sib of related.filter((f) => f.bug === bug.id && f.status !== 'active')) {
-        const kept = sib.type === 'regression' ? updateFlowMeta(sib, { status: 'active' }) : moveFlow(paths, sib, 'regression', { status: 'active' });
-        lockFlow(paths, kept, 'fixer');
-      }
-      if (flow.id !== bug.flowId) {
-        bug.flowId = flow.id;
-        saveBug(paths, bug);
-      }
+      flow = acceptFix(project, bug, flow, related, 'fixer');
       const message = `${bug.id} fixed on attempt ${n}: Kane passed the flow${related.length ? ` and ${related.length} related flow${related.length === 1 ? '' : 's'}` : ''}. Saved to the regression library.`;
       emit(paths, 'bug', message, { bugId: bug.id, status: 'fixed', attempt: n }, job.id);
       endJob(paths, job, 'passed', message, { bugId: bug.id });
@@ -276,6 +258,30 @@ export async function runFixer(project: Project, bugId: string, opts: FixOptions
     releaseBug();
     app.stop();
   }
+}
+
+/** Accepted: the flow joins the regression library and Guard replays it from now on. Returns the flow where it now lives. */
+export function acceptFix(project: Project, bug: BugRecord, flow: Flow, related: Flow[], by: string): Flow {
+  const { paths } = project;
+  bug.status = 'fixed';
+  bug.fixedAt = nowIso();
+  saveBug(paths, bug);
+  const failFirst = flow.fail_first ?? bug.runs[0];
+  const kept =
+    flow.type === 'regression'
+      ? updateFlowMeta(flow, { status: 'active', fail_first: failFirst })
+      : moveFlow(paths, flow, 'regression', { status: 'active', fail_first: failFirst, bug: bug.id });
+  lockFlow(paths, kept, by);
+  // Other repros of this bug (a captured report, a second attack) passed too: they guard it from now on as well.
+  for (const sib of related.filter((f) => f.bug === bug.id && f.status !== 'active')) {
+    const s = sib.type === 'regression' ? updateFlowMeta(sib, { status: 'active' }) : moveFlow(paths, sib, 'regression', { status: 'active' });
+    lockFlow(paths, s, by);
+  }
+  if (kept.id !== bug.flowId) {
+    bug.flowId = kept.id;
+    saveBug(paths, bug);
+  }
+  return kept;
 }
 
 /** Other repros of the same bug come first (they must pass too), then active flows in the same area. */

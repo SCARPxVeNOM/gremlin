@@ -74,6 +74,7 @@ export async function runFlow(project: Project, flow: Flow, opts: RunFlowOptions
       bugDetection: config.kane.bug_detection,
       author: opts.author,
       signal: opts.signal,
+      onWait: (pid) => reporter.info(`  ⏳ Another Kane run is in progress on this machine (pid ${pid}); waiting for it so the two don't share a browser`),
       onEvent: (e) => {
         reporter.kane?.(flow, e);
         if (e.kind === 'step-start') emit(paths, 'kane-step', e.heading, { runId: id, index: e.index, status: 'running' }, opts.job);
@@ -100,8 +101,8 @@ export async function runFlow(project: Project, flow: Flow, opts: RunFlowOptions
       run.status = 'flaky';
     } else {
       run.status = second.status === 'error' ? 'failed' : 'failed';
-      // keep the run whose evidence explains the failure best: the one with a triage verdict
-      if (second.status === 'failed' && second.verdict && !first.verdict) final = second;
+      final = stronger(first, second);
+      run.retry.verdict = (final === second ? first : second).verdict;
     }
   } else {
     run.status = first.status;
@@ -144,6 +145,16 @@ export async function runFlow(project: Project, flow: Flow, opts: RunFlowOptions
     opts.job,
   );
   return run;
+}
+
+/**
+ * Both attempts failed: which one speaks for the run? Kane triages each attempt on its own, and when
+ * the two disagree, the more confident verdict stands. The other is kept on the record.
+ */
+export function stronger(first: KaneRunResult, second: KaneRunResult): KaneRunResult {
+  if (second.status !== 'failed' || !second.verdict) return first;
+  if (!first.verdict) return second;
+  return (second.verdict.confidence ?? 0) > (first.verdict.confidence ?? 0) ? second : first;
 }
 
 export function describeRun(run: RunRecord): string {

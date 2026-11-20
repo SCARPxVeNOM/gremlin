@@ -137,6 +137,21 @@ export interface FixAttempt {
   durationS?: number
 }
 
+export interface ArenaEntry {
+  contender: string
+  label: string
+  durationS?: number
+  changedFiles: string[]
+  added: number
+  removed: number
+  blocked: string[]
+  runId?: string
+  relatedRuns: string[]
+  result: 'won' | 'passed' | 'flaky' | 'failed' | 'broke-related' | 'broke-startup' | 'no-change' | 'agent-error'
+  note?: string
+  summary?: string
+}
+
 export interface Bug {
   id: string
   title: string
@@ -150,6 +165,9 @@ export interface Bug {
   report?: { source: string; ref?: string; url?: string; text: string }
   failingStep?: string
   reason?: string
+  /** The behaviour contract the failure broke, when it was one. */
+  contract?: string
+  rejectedBecause?: string
   verdict?: KaneVerdict
   runs: string[]
   attempts: FixAttempt[]
@@ -158,6 +176,8 @@ export interface Bug {
   updatedAt: string
   fixedAt?: string
   regressedAt?: string
+  /** Several agents competed to fix this bug and Kane judged them. */
+  arena?: { at: string; entries: ArenaEntry[]; winner?: string }
   credits: number
 }
 

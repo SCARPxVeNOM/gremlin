@@ -1,5 +1,5 @@
-name: Gremlin Guard
-description: Replay the Gremlin flows a change touches with Kane CLI in a real browser, and fail the check if any break.
+name: Gremlin
+description: Replay the Gremlin flows a change touches with Kane CLI in a real browser, or turn a labeled issue into a pull request Kane has proven.
 author: SCARPxVeNOM
 branding:
   icon: shield
@@ -8,6 +8,10 @@ branding:
 inputs:
   base:
     description: Git ref to diff against, so only the flows this change touches are replayed (e.g. origin/main). Empty replays every active flow.
+    required: false
+    default: ''
+  issue:
+    description: Issue number for the issue autopilot (reproduce it, fix it, open a proven pull request). Empty runs Guard instead.
     required: false
     default: ''
   working-directory:
@@ -20,6 +24,18 @@ inputs:
   lt-access-key:
     description: TestMu AI (LambdaTest) access key for Kane CLI.
     required: true
+  anthropic-api-key:
+    description: Anthropic API key for Claude Code, the agent that drafts repros and fixes bugs in the issue autopilot.
+    required: false
+    default: ''
+  claude-code-oauth-token:
+    description: Instead of an API key, a Claude subscription token for Claude Code (create one with `claude setup-token`).
+    required: false
+    default: ''
+  github-token:
+    description: Token gh uses to comment, label and open the pull request.
+    required: false
+    default: ${{ github.token }}
 
 outputs:
   comment:
@@ -32,12 +48,16 @@ runs:
     - name: Build Gremlin
       shell: bash
       working-directory: ${{ github.action_path }}
+      env:
+        GREMLIN_ISSUE: ${{ inputs.issue }}
       run: |
         npm ci --no-audit --no-fund
         npm run build -w gremlin-qa
         npm install -g @testmuai/kane-cli
+        if [ -n "$GREMLIN_ISSUE" ]; then npm install -g @anthropic-ai/claude-code; fi
 
     - name: Replay flows with Kane CLI
+      if: inputs.issue == ''
       shell: bash
       working-directory: ${{ inputs.working-directory }}
       env:
@@ -45,3 +65,16 @@ runs:
         LT_ACCESS_KEY: ${{ inputs.lt-access-key }}
         GREMLIN_BASE: ${{ inputs.base }}
       run: node "${{ github.action_path }}/packages/gremlin/dist/cli.js" guard --ci ${GREMLIN_BASE:+--base "$GREMLIN_BASE"}
+
+    - name: Reproduce, fix and prove the issue with Kane CLI
+      if: inputs.issue != ''
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      env:
+        LT_USERNAME: ${{ inputs.lt-username }}
+        LT_ACCESS_KEY: ${{ inputs.lt-access-key }}
+        ANTHROPIC_API_KEY: ${{ inputs.anthropic-api-key }}
+        CLAUDE_CODE_OAUTH_TOKEN: ${{ inputs.claude-code-oauth-token }}
+        GH_TOKEN: ${{ inputs.github-token }}
+        GREMLIN_ISSUE: ${{ inputs.issue }}
+      run: node "${{ github.action_path }}/packages/gremlin/dist/cli.js" issue "$GREMLIN_ISSUE"

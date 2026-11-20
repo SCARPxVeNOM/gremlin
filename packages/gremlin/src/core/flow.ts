@@ -204,7 +204,10 @@ export function saveFlow(paths: ProjectPaths, draft: FlowDraft): Flow {
     bug: draft.bug,
     created: nowIso(),
   };
-  writeFileSync(path, serializeFlow({ ...meta, steps: draft.steps, expect: draft.expect, notes: draft.notes }));
+  // agents often number their steps or bullet their expectations; the flow format does that itself
+  const steps = draft.steps.map((s) => s.replace(/^\s*(?:\d+[.)]|[-*•])\s+/, ''));
+  const expect = draft.expect.map((e) => e.replace(/^\s*[-*•]\s+/, ''));
+  writeFileSync(path, serializeFlow({ ...meta, steps, expect, notes: draft.notes }));
   return parseFlow(readFileSync(path, 'utf8'), path, `${type}/${slug}`);
 }
 
@@ -332,6 +335,15 @@ export function compileFlow(flow: Flow, config: GremlinConfig, paths: ProjectPat
   lines.push('## Check the expected outcome');
   lines.push(flow.expect.map((e) => `Verify that ${lowerFirst(e.replace(/\.$/, ''))}.`).join('\n'));
   stepMap.push(`Expect: ${flow.expect.join(' / ')}`);
+
+  // A separate step, so a broken contract is told apart from the flow's own expectations.
+  const rules = contractsFor(flow, config);
+  if (rules.length) {
+    lines.push('');
+    lines.push(`## ${CONTRACT_STEP}`);
+    lines.push(rules.map((c) => `Verify that ${lowerFirst(c.rule.replace(/\.$/, ''))}.`).join('\n'));
+    stepMap.push(`Rules: ${rules.map((c) => c.rule).join(' / ')}`);
+  }
   lines.push('');
 
   const content = lines.join('\n');
@@ -345,6 +357,25 @@ function headingFor(step: string): string {
   const clean = step.replace(/["“”]/g, '').replace(/\s+/g, ' ').trim();
   const first = clean.split(/(?<=[.!?])\s/)[0];
   return first.length > 64 ? first.slice(0, 63).trimEnd() + '…' : first.replace(/[.!?]$/, '');
+}
+
+export const CONTRACT_STEP = 'Check the product rules';
+
+/** The behaviour contracts a flow is held to: every untagged rule, plus rules tagged with one of the flow's areas. */
+export function contractsFor(flow: Pick<Flow, 'tags'>, config: GremlinConfig): GremlinConfig['contracts'] {
+  return config.contracts.filter((c) => !c.tags.length || c.tags.some((t) => flow.tags.includes(t.toLowerCase())));
+}
+
+/**
+ * Which contract a failed run broke, if the failure was in the contract step. Kane quotes the assertion it
+ * couldn't verify, so the rule is matched on its words; when the quote can't be matched, the first rule stands in.
+ */
+export function brokenContract(flow: Pick<Flow, 'tags'>, config: GremlinConfig, failed?: { heading?: string; reason?: string }): string | undefined {
+  if (!failed?.heading || !failed.heading.toLowerCase().includes(CONTRACT_STEP.toLowerCase())) return undefined;
+  const rules = contractsFor(flow, config);
+  const words = (s: string) => s.toLowerCase().replace(/[^a-z0-9$ ]+/g, ' ').replace(/\s+/g, ' ').trim();
+  const reason = words(failed.reason ?? '');
+  return (rules.find((c) => reason.includes(words(c.rule).slice(0, 40))) ?? rules[0])?.rule;
 }
 
 function lowerFirst(s: string): string {

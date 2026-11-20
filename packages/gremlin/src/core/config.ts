@@ -74,6 +74,14 @@ export const ConfigSchema = z.object({
     })
     .default({ per_run: 200, per_day: 2000, per_bug: 500 }),
   protected_paths: z.array(z.string()).default([]),
+  /**
+   * Behaviour contracts: product-wide rules Kane checks at the end of every flow, such as
+   * "Every price shows a currency symbol". A rule with tags applies only to flows with one of them.
+   */
+  contracts: z
+    .array(z.union([z.string(), z.object({ rule: z.string(), tags: z.array(z.string()).default([]) })]))
+    .default([])
+    .transform((list) => list.map((c) => (typeof c === 'string' ? { rule: c, tags: [] as string[] } : c))),
   kane: z
     .object({
       headless: z.boolean().default(true),

@@ -118,11 +118,14 @@ hostile user and files only what Kane confirms. In the same session it found 4 m
 | | |
 | --- | --- |
 | **Capture** | Paste a support email, pass a file, or point it at a GitHub issue (Gremlin can comment the verdict back). Personal details are stripped, your agent drafts a repro flow, and **Kane must watch it fail** before it counts as a bug. |
+| **Issue autopilot** | Label a GitHub issue `gremlin` and walk away. Kane reproduces it, your agent fixes it, Kane watches the fix work, and a **pull request opens with Kane's before-and-after screenshots** and the regression test. The issue thread shows each step; merging closes it. Runs in a GitHub Action or with `gremlin watch`. |
 | **Breaker** | Reads your product (routes, forms, and your code via your own agent) and sends Kane to attack it: input abuse, timing, navigation, state and accessibility. Only failures Kane judges to be *product* bugs are filed, so it doesn't cry wolf. |
 | **Fixer** | Hands the bug, Kane's evidence pack and the likely code to *your* coding agent. Kane re-runs the flow and its neighbours. A bug is only *fixed* when Kane says so. |
+| **Agent arena** | Several coding agents fix the same bug at once, each in its own git worktree (Claude Code's Opus, Sonnet and Haiku if it's the only agent you have; Codex, Cursor or Gemini alongside it if installed). Kane judges every fix in a real browser, and the smallest fix that passes wins. |
 | **Guard** | Replays the flows a change touches, on every agent "done", every PR (GitHub Action) or on demand. Recorded steps replay from Kane's cache **for 0 credits**. |
 | **Claude Code hooks** | The tightest loop: Claude can't finish a task until Kane has replayed the flows its change touches. If one fails, Kane's evidence becomes Claude's next prompt. |
 | **MCP server** | Eight tools (`gremlin_guard`, `gremlin_capture`, `gremlin_get_evidence`…) for Cursor, Windsurf, Claude Code or any MCP client. |
+| **Behaviour contracts** | Product-wide rules ("every price shows a currency", "typed text is never rendered as HTML") that Kane checks at the end of every flow, so one rule guards the whole app and a broken one is named on the bug. |
 | **Dashboard** | `gremlin dash`: a local dashboard that follows every loop live: flows, bugs, Kane's step-by-step evidence and screenshots, fix attempts, credits. |
 
 Flows are plain markdown anyone can read, write and review:
@@ -296,15 +299,20 @@ The point of Gremlin is that **Kane's verdict always flows back to an agent**, a
 | `gremlin run [flows…] [--tag t] [--all]` | Run flows through Kane now |
 | `gremlin break [--area a] [--category c] [--max n]` | Breaker hunt |
 | `gremlin capture [text] [--issue 42] [--comment]` | Turn a bug report into a Kane-confirmed repro |
+| `gremlin issue <n> [--no-pr] [--arena]` | Issue autopilot: reproduce issue #n, fix it, open a pull request Kane has proven |
+| `gremlin watch [--label l] [--once]` | Run the issue autopilot on every newly labeled issue |
 | `gremlin fix <bug> [--mode suggest\|approve\|autonomous]` | Hand a bug to your agent; Kane proves the fix |
+| `gremlin arena <bug> [--agents a,b,c]` | Agent arena: agents compete on the same bug; Kane picks the smallest passing fix |
+| `gremlin pr <bug>` | Open a pull request for a fixed bug: the fix, its locked regression flow, Kane's before and after |
 | `gremlin verify <bug>` | Re-run a bug's flow after a fix made outside Gremlin |
 | `gremlin guard [--all] [--base origin/main] [--ci]` | Replay the flows a change touches; exit 1 on failure |
 | `gremlin flows list\|show\|new\|approve\|retire` | Manage the flow library |
 | `gremlin bugs [id]` | Bugs with their evidence and fix attempts |
+| `gremlin reject <bug> [why]` | Close a finding that isn't a bug, and record why |
 | `gremlin report` | Weekly summary: found, fixed, regressions caught, flaky flows, credits |
 | `gremlin dash` | Local dashboard on port 4777 |
 | `gremlin mcp` | MCP server on stdio |
-| `gremlin install claude\|cursor\|codex\|gemini\|ci` | Install a connector |
+| `gremlin install claude\|cursor\|codex\|gemini\|ci\|issues` | Install a connector |
 
 ### GitHub Action
 
@@ -319,6 +327,23 @@ The point of Gremlin is that **Kane's verdict always flows back to an agent**, a
 ```
 
 Guard comments a verdict table on the PR and uploads Kane's evidence packs as an artifact.
+
+`gremlin install issues` writes `.github/workflows/gremlin-issues.yml`, the issue autopilot. It runs when an issue gets
+the `gremlin` label (`sources.github.label`):
+
+```yaml
+- uses: SCARPxVeNOM/gremlin@main
+  with:
+    issue: ${{ github.event.issue.number }}
+    lt-username: ${{ secrets.LT_USERNAME }}
+    lt-access-key: ${{ secrets.LT_ACCESS_KEY }}
+    claude-code-oauth-token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}   # or anthropic-api-key
+```
+
+Gremlin never pushes to your default branch: a proven fix always arrives as a pull request, so review stays with a
+human. Labels on the issue track where it is (`gremlin:working`, `gremlin:reproduced`, `gremlin:fix-proposed`,
+`gremlin:cant-reproduce`, `gremlin:needs-human`). GitHub doesn't start workflows for pull requests opened with
+`github.token`; set a `GREMLIN_GITHUB_TOKEN` secret if you want Guard to run on Gremlin's pull requests too.
 
 ## Configuration
 
@@ -341,8 +366,17 @@ guard:
 breaker: { categories: [input, timing, navigation, state, accessibility], max_flows: 6 }
 budget: { per_run: 600, per_day: 3000, per_bug: 600 }
 protected_paths: ["src/payments/**"]
+contracts:                     # product-wide rules Kane checks at the end of every flow
+  - Every price shows a dollar sign and two decimals, like $12.00
+  - { rule: "Nothing the shopper typed is shown as HTML formatting", tags: [search] }
 kane: { headless: true, max_steps: 40, bug_detection: continue }
 ```
+
+**Behaviour contracts** are rules the whole product must keep, written once instead of in every flow. Kane checks them
+in a step of their own at the end of each flow they apply to (untagged rules apply everywhere), so a Breaker attack on
+search can break the "no HTML" rule even though nobody wrote that expectation into the attack. A failure there is
+recorded as the contract it broke, and the agent's fix package says which rule and that the fix may belong in shared
+code. Contracts live in `gremlin.config.yaml`, which agents can't edit.
 
 What lives in `.gremlin/`: `flows/{happy,adversarial,regression}`, `bugs/`, `lock.json` and `kane/` (compiled tests and
 Kane's replay recordings) are committed. `runs/`, `evidence/`, `events.jsonl`, the credit ledger and stats stay local.

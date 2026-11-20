@@ -1,7 +1,7 @@
 import picomatch from 'picomatch';
 import { failureBrief } from './brief.ts';
 import type { Project } from './config.ts';
-import { listFlows, type Flow } from './flow.ts';
+import { brokenContract, listFlows, type Flow } from './flow.ts';
 import { endJob, startJob, type Job } from './jobs.ts';
 import { describeRun, runFlow, silentReporter, type Reporter } from './runner.ts';
 import { scoreConfidence, scoreSeverity } from './severity.ts';
@@ -157,6 +157,7 @@ function recordGuardFailure(project: Project, flow: Flow, run: RunRecord, job: J
     existing.status = 'confirmed';
     existing.runs.push(run.id);
     existing.failingStep = run.kane?.failedStep?.heading;
+    existing.contract = brokenContract(flow, project.config, { heading: run.kane?.failedStep?.heading, reason: run.kane?.reason });
     existing.reason = run.kane?.reason;
     existing.fixedAt = undefined;
     if (regression) existing.regressedAt = nowIso();
@@ -175,6 +176,7 @@ function recordGuardFailure(project: Project, flow: Flow, run: RunRecord, job: J
     attack: flow.attack,
     tags: flow.tags,
     failingStep: run.kane?.failedStep?.heading,
+    contract: brokenContract(flow, project.config, { heading: run.kane?.failedStep?.heading, reason: run.kane?.reason }),
     reason: run.kane?.reason,
     verdict: run.kane?.verdict,
     runs: [run.id],
