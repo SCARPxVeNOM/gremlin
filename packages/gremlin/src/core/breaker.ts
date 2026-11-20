@@ -298,7 +298,7 @@ function triageFinding(project: Project, flow: Flow, run: RunRecord, p: PlannedA
     same.credits += run.credits;
     same.updatedAt = nowIso();
     saveBug(paths, same);
-    updateFlowMeta(flow, { bug: same.id, status: 'confirmed', fail_first: run.id });
+    lockFlow(paths, updateFlowMeta(flow, { bug: same.id, status: 'confirmed', fail_first: run.id }), 'breaker');
     emit(paths, 'bug', `Same bug as ${same.id}, reproduced by a second attack: ${flow.title}`, { bugId: same.id, duplicate: true, runId: run.id }, job.id);
     return { flow, run, outcome: 'duplicate', bug: same };
   }
@@ -323,7 +323,8 @@ function triageFinding(project: Project, flow: Flow, run: RunRecord, p: PlannedA
     credits: run.credits,
   };
   saveBug(paths, bug);
-  updateFlowMeta(flow, { bug: bug.id, status: 'confirmed', fail_first: run.id });
+  // locked as soon as Kane has watched it fail, like a captured repro, so it can't be weakened before it's fixed
+  lockFlow(paths, updateFlowMeta(flow, { bug: bug.id, status: 'confirmed', fail_first: run.id }), 'breaker');
   emit(paths, 'bug', `${bug.id}: ${bug.title}`, { bugId: bug.id, severity: bug.severity, confidence: bug.confidence, origin: 'breaker', status: bug.status }, job.id);
   return { flow, run, outcome: 'bug', bug };
 }

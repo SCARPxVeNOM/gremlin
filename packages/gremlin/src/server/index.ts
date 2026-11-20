@@ -10,7 +10,7 @@ import { compileFlow, getFlow, updateFlowMeta } from '../core/flow.ts';
 import { runFixer, verifyBug } from '../core/fixer.ts';
 import { runGuard } from '../core/guard.ts';
 import { getAgent, detectAgents } from '../core/agent.ts';
-import { kaneStatus, type KaneStatus } from '../core/kane.ts';
+import { kaneShareLink, kaneStatus, type KaneStatus } from '../core/kane.ts';
 import { runFlow } from '../core/runner.ts';
 import { getBug, getRun, listBugs, listRuns, lockFlow, readEvents, readStats, saveBug, unlockFlow } from '../core/store.ts';
 import { flowViews, summarize, weeklyMarkdown } from '../core/summary.ts';
@@ -279,7 +279,7 @@ function trimRun(r: NonNullable<ReturnType<typeof getRun>>) {
           durationS: kane.durationS,
           replayed: kane.replayed,
           authored: kane.authored,
-          shareUrl: kane.shareUrl,
+          shareUrl: kaneShareLink(kane),
           steps: kane.steps.map((s) => ({ index: s.index, heading: s.heading, status: s.status, durationS: s.durationS })),
         }
       : undefined,

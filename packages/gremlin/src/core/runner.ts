@@ -5,7 +5,7 @@ import { digestEvidence } from './evidence.ts';
 import { compileFlow, updateFlowMeta, type Flow } from './flow.ts';
 import { assertBudget, assertFlowSafe, assertTargetSafe } from './guardrails.ts';
 import { runKaneTest, type KaneEvent, type KaneRunResult } from './kane.ts';
-import { emit, recordCredits, recordFlowResult, saveRun, type RunPurpose, type RunRecord } from './store.ts';
+import { emit, lockStatus, recordCredits, recordFlowResult, saveRun, type RunPurpose, type RunRecord } from './store.ts';
 import { resetData } from './target.ts';
 import { nowIso, round, runId } from './util.ts';
 
@@ -121,7 +121,8 @@ export async function runFlow(project: Project, flow: Flow, opts: RunFlowOptions
   if (run.status === 'flaky') {
     const recentFlakes = fstats.history.slice(-10).filter((h) => h === 'flaky').length;
     if (recentFlakes >= 3 && flow.status !== 'quarantined') {
-      updateFlowMeta(flow, { status: 'quarantined' });
+      // Gremlin took it out of Guard, not an agent, so its lock says so; otherwise Guard would call it tampered with
+      lockStatus(paths, updateFlowMeta(flow, { status: 'quarantined' }), `quarantine: ${recentFlakes} flakes in 10 runs`);
       reporter.warn(`  ⚠ ${flow.title} flaked ${recentFlakes} times in its last 10 runs and is now quarantined.`);
       emit(paths, 'warn', `Quarantined flaky flow: ${flow.title}`, { flowId: flow.id }, opts.job);
     }

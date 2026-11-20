@@ -3,7 +3,7 @@ import { failureBrief } from './brief.ts';
 import type { Project } from './config.ts';
 import { brokenContract, listFlows, type Flow } from './flow.ts';
 import { endJob, startJob, type Job } from './jobs.ts';
-import { isAutomationFault } from './kane.ts';
+import { isAutomationFault, kaneShareLink } from './kane.ts';
 import { describeRun, runFlow, silentReporter, type Reporter } from './runner.ts';
 import { scoreConfidence, scoreSeverity } from './severity.ts';
 import { gitChangedFiles, inHistory } from './snapshot.ts';
@@ -258,7 +258,7 @@ export function guardMarkdown(project: Project, report: GuardReport): string {
     '| --- | --- | --- | --- |',
     ...report.results.map(
       (r) =>
-        `| ${icon(r.status)} | ${r.flow.title} | ${r.flow.type} | ${r.run ? describeRun(r.run).replace(/\|/g, '\\|') : r.status}${r.regression ? ' **(regression)**' : ''}${r.status === 'unmerged' ? ` **(not a regression: ${unmergedFix(r.bug!)})**` : ''}${r.run?.kane?.shareUrl ? ` · [evidence](${r.run.kane.shareUrl})` : ''} |`,
+        `| ${icon(r.status)} | ${r.flow.title} | ${r.flow.type} | ${r.run ? describeRun(r.run).replace(/\|/g, '\\|') : r.status}${r.regression ? ' **(regression)**' : ''}${r.status === 'unmerged' ? ` **(not a regression: ${unmergedFix(r.bug!)})**` : ''}${kaneShareLink(r.run?.kane) ? ` · [evidence](${kaneShareLink(r.run?.kane)})` : ''} |`,
     ),
   ];
   return lines.join('\n') + '\n';

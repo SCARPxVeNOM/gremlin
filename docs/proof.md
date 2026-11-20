@@ -15,7 +15,8 @@ All times are UTC. Unless a date is given, they are on 20 November 2026.
    and the rest is Gremlin's record of the bug, the locked regression flow and Kane's recording of it.
 2. **Click Kane's run links in that table.** They open Kane's report on LambdaTest's test manager without an account.
    Both links open the same test case and show its latest version, which is the passing one. The failing run is
-   recorded in steps 3 and 4 below and in Kane's before screenshot.
+   recorded in steps 3 and 4 below and in Kane's before screenshot. (Gremlin now links only a run that saved the test,
+   so pull requests opened from here on show the failing run by its ID and screenshot instead.)
 3. **Read the [issue #5 thread](https://github.com/SCARPxVeNOM/kiln-shop/issues/5).** Five comments from
    `github-actions[bot]` and a trail of labels show each step: Kane failing the repro, Kane blaming the test, the agent
    disagreeing, a human adding `gremlin:confirmed`, and the fix.
@@ -209,7 +210,7 @@ It is a record, not a working project: the shop's code isn't in it.
 
 ## Unit tests
 
-`npm test` runs the tests in [`packages/gremlin/test`](../packages/gremlin/test) with Node's test runner: 38 tests,
+`npm test` runs the tests in [`packages/gremlin/test`](../packages/gremlin/test) with Node's test runner: 41 tests,
 all passing on 21 November 2026, in about 12 seconds. They use stand-ins for Kane, the agent and `gh`, so they cost no
 credits. The ones behind the claims on this page:
 
@@ -251,7 +252,9 @@ credits. The ones behind the claims on this page:
   either way.
 - **Kane's share links show the test case, not the run.** On PR #6 the *Before* and *After* links open the same Kane
   test case at its latest version, which passes. The failing run is in the issue thread, the Actions log and
-  `kane-before.jpg`.
+  `kane-before.jpg`. Kane saves a new version of a test only when a run passes, so a failed run's link can never show
+  the failure. Gremlin now links a run only if that run saved the version the link opens (`kaneShareLink` in
+  [`kane.ts`](../packages/gremlin/src/core/kane.ts)); the pull requests above were opened before that change.
 - **Run 2's Kane run IDs and credits aren't published.** Its step log shows each Kane step and verdict, and its
   evidence packs are in the run's `gremlin-issue-5` artifact (downloading it needs a GitHub sign-in), but no run IDs
   appear on GitHub.

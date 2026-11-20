@@ -9,7 +9,7 @@ import { saveFlow, type Flow } from '../src/core/flow.ts';
 import { protectedMatcher } from '../src/core/guardrails.ts';
 import { projectPaths } from '../src/core/paths.ts';
 import { changedSince, restoreGuarded, takeSnapshot } from '../src/core/snapshot.ts';
-import { lockFlow, lockPath, readLock, tamperedFlows, unlockFlow } from '../src/core/store.ts';
+import { lockFlow, lockPath, lockStatus, readLock, tamperedFlows, unlockFlow, type BugRecord } from '../src/core/store.ts';
 
 function git(cwd: string, ...args: string[]): string {
   const r = spawnSync('git', args, { cwd, encoding: 'utf8' });
@@ -41,7 +41,7 @@ test('each flow is locked in a file of its own, and an edit is still caught', ()
   lockFlow(p.paths, b, 'human');
 
   assert.equal(relative(p.root, lockPath(p.paths, a.id)), '.gremlin/locks/regression/coupon-codes-ignore-case.json');
-  assert.deepEqual(Object.keys(JSON.parse(readFileSync(lockPath(p.paths, a.id), 'utf8'))), ['hash', 'approvedAt', 'by']);
+  assert.deepEqual(Object.keys(JSON.parse(readFileSync(lockPath(p.paths, a.id), 'utf8'))), ['hash', 'status', 'tags', 'approvedAt', 'by']);
   assert.deepEqual(Object.keys(readLock(p.paths).flows).sort(), [a.id, b.id].sort());
   assert.equal(readLock(p.paths).flows[a.id].hash, a.hash);
   assert.ok(!existsSync(p.paths.legacyLock), 'no shared lock.json is written');
@@ -56,6 +56,39 @@ test('each flow is locked in a file of its own, and an edit is still caught', ()
   assert.ok(!existsSync(lockPath(p.paths, b.id)));
   assert.deepEqual(Object.keys(readLock(p.paths).flows), [a.id]);
   assert.deepEqual(tamperedFlows(p.paths, [weakened(b)]), [], 'an unlocked flow is not checked');
+});
+
+test('a locked flow taken out of Guard is caught too: no longer active, or missing a tag Guard picks it by', () => {
+  const p = shop();
+  const a = flow(p, 'Coupon codes ignore case');
+  lockFlow(p.paths, a, 'fixer');
+  assert.deepEqual(tamperedFlows(p.paths, [{ ...a, status: 'quarantined' }]).map((f) => f.id), [a.id], 'switched off');
+  assert.deepEqual(tamperedFlows(p.paths, [{ ...a, tags: [] }]).map((f) => f.id), [a.id], 'its area tag dropped');
+  assert.deepEqual(tamperedFlows(p.paths, [{ ...a, tags: ['checkout', 'coupon'] }]), [], 'a tag added only widens what it guards');
+
+  // Gremlin quarantining a flaky flow says so in the lock, so that isn't tampering, and it keeps the approved hash
+  lockStatus(p.paths, { ...a, status: 'quarantined' }, 'quarantine: 3 flakes in 10 runs');
+  assert.deepEqual(tamperedFlows(p.paths, [{ ...a, status: 'quarantined' }]), []);
+  assert.deepEqual(tamperedFlows(p.paths, [{ ...weakened(a), status: 'quarantined' }]).map((f) => f.id), [a.id], 'so it lets no edit through');
+
+  // a lock written before status and tags were kept checks the hash only
+  writeFileSync(lockPath(p.paths, a.id), JSON.stringify({ hash: a.hash, approvedAt: '', by: 'fixer' }));
+  assert.deepEqual(tamperedFlows(p.paths, [{ ...a, status: 'quarantined', tags: [] }]), []);
+  assert.deepEqual(tamperedFlows(p.paths, [weakened(a)]).map((f) => f.id), [a.id]);
+});
+
+test('an attack moved into regression/ when its fix is accepted leaves no lock behind under its old name', async () => {
+  const { acceptFix } = await import('../src/core/fixer.ts');
+  const p = shop();
+  const attack = saveFlow(p.paths, { title: 'Cart rejects a negative quantity', type: 'adversarial', start: '/', source: 'breaker', status: 'confirmed', tags: ['cart'], steps: ['Open the cart'], expect: ['No line has a negative quantity'] });
+  lockFlow(p.paths, attack, 'breaker');
+  const bug = { id: 'BUG-002', title: attack.title, origin: 'breaker', status: 'fixing', flowId: attack.id, tags: ['cart'], runs: ['RUN-A'], attempts: [], credits: 0 } as unknown as BugRecord;
+
+  const kept = acceptFix(p, bug, attack, [], 'fixer');
+  assert.equal(kept.id, 'regression/cart-rejects-a-negative-quantity');
+  assert.deepEqual(Object.keys(readLock(p.paths).flows), [kept.id]);
+  assert.equal(readLock(p.paths).flows[kept.id].status, 'active');
+  assert.ok(!existsSync(lockPath(p.paths, attack.id)));
 });
 
 test("an older project's lock.json still guards its flows, and moves to per-flow files on the next lock change", () => {

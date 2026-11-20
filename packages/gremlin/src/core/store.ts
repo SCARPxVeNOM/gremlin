@@ -3,7 +3,7 @@ import { existsSync, readdirSync, renameSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 import type { ArenaRecord } from './arena.ts';
 import type { EvidenceDigest } from './evidence.ts';
-import type { Flow, FlowType } from './flow.ts';
+import type { Flow, FlowStatus, FlowType } from './flow.ts';
 import type { KaneRunResult } from './kane.ts';
 import { ensureDir, type ProjectPaths } from './paths.ts';
 import { appendJsonl, nowIso, readJson, readJsonl, todayKey, writeJson } from './util.ts';
@@ -303,6 +303,12 @@ export function stability(s?: FlowStats): number | null {
 
 export interface LockEntry {
   hash: string;
+  /**
+   * Guard replays only active flows, picked by tag, so a flow that stops being active or loses a tag stops guarding
+   * what it was locked to guard, though its hash is the same. Locks written before these were kept have neither.
+   */
+  status?: FlowStatus;
+  tags?: string[];
   approvedAt: string;
   by: string;
 }
@@ -361,8 +367,16 @@ function migrateLegacyLock(paths: ProjectPaths): void {
 
 export function lockFlow(paths: ProjectPaths, flow: Flow, by: string): void {
   migrateLegacyLock(paths);
-  const entry: LockEntry = { hash: flow.hash, approvedAt: nowIso(), by };
+  const entry: LockEntry = { hash: flow.hash, status: flow.status, tags: flow.tags, approvedAt: nowIso(), by };
   writeJson(lockPath(paths, flow.id), entry);
+}
+
+/** Gremlin itself changed a locked flow's status (quarantining it): record that, keeping the approved hash and tags. */
+export function lockStatus(paths: ProjectPaths, flow: Flow, by: string): void {
+  const entry = readLock(paths).flows[flow.id];
+  if (!entry) return;
+  migrateLegacyLock(paths);
+  writeJson(lockPath(paths, flow.id), { ...entry, status: flow.status, approvedAt: nowIso(), by });
 }
 
 export function unlockFlow(paths: ProjectPaths, flowId: string): void {
@@ -370,9 +384,14 @@ export function unlockFlow(paths: ProjectPaths, flowId: string): void {
   rmSync(lockPath(paths, flowId), { force: true });
 }
 
+/** Locked flows whose test changed, or that were taken out of Guard: no longer active, or missing a tag they were locked with. */
 export function tamperedFlows(paths: ProjectPaths, flows: Flow[]): Flow[] {
   const lock = readLock(paths);
-  return flows.filter((f) => lock.flows[f.id] && lock.flows[f.id].hash !== f.hash);
+  return flows.filter((f) => {
+    const entry = lock.flows[f.id];
+    if (!entry) return false;
+    return entry.hash !== f.hash || (entry.status === 'active' && f.status !== 'active') || Boolean(entry.tags?.some((t) => !f.tags.includes(t)));
+  });
 }
 
 // ---------------------------------------------------------------------------

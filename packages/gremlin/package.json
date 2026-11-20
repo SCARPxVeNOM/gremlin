@@ -4,12 +4,20 @@
   "description": "Every bug report becomes a failing test, a fix and a regression test: your own coding agent does the work, Kane CLI referees every step in a real browser, and a hostile-user Breaker finds the bugs nobody reported.",
   "type": "module",
   "license": "MIT",
+  "homepage": "https://github.com/SCARPxVeNOM/gremlin#readme",
+  "bugs": {
+    "url": "https://github.com/SCARPxVeNOM/gremlin/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/SCARPxVeNOM/gremlin.git",
+    "directory": "packages/gremlin"
+  },
   "bin": {
     "gremlin": "dist/cli.js"
   },
   "files": [
-    "dist",
-    "templates"
+    "dist"
   ],
   "scripts": {
     "build": "tsup",
@@ -26,10 +34,6 @@
     "mcp",
     "e2e"
   ],
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/SCARPxVeNOM/gremlin.git"
-  },
   "engines": {
     "node": ">=20"
   },

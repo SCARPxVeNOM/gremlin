@@ -28,7 +28,10 @@ for (const [i, heading] of headings.entries()) {
 }
 if (failed) out({ type: 'test_md_bug_verdict', family: 'automation_bug', category: 'state_transition_bug', confidence: 0.97, one_liner: 'The empty-cart check ran while the cart still had a mug.' });
 out({ type: 'run_end', status: failed ? 'failed' : 'passed', reason: failed ? 'Checkpoint assertion failed.' : undefined, credits_consumed: 0 });
-out({ type: 'test_md_done', overall_status: failed ? 'failed' : 'passed' });
+// like Kane, only a passing run saves a version of the test, and the share link opens the latest saved one
+const share_url = 'https://test-manager.example/test-cases/TC-33/dashboard/share/' + Date.now();
+out({ type: 'test_md_summary', overall_status: failed ? 'failed' : 'passed', commit: { committed: !failed, reason: failed ? 'run_failed' : 'ok' }, share_url });
+out({ type: 'test_md_done', overall_status: failed ? 'failed' : 'passed', share_url });
 process.exit(failed ? 1 : 0);
 `,
 );
@@ -152,6 +155,28 @@ test("a confirmed repro is filed on the human's word only if Kane fails it where
   delete process.env.FAKE_KANE_FAIL;
   const gone = await runCapture(p, input, { draft: draft('Checking out clears the cart'), confirmed: { by: 'maya', failedAt: 'Check the expected outcome' } });
   assert.equal(gone.outcome, 'cant-reproduce');
+});
+
+test("Kane's link is shown only for a run that saved the test, since it opens the test as it last passed", async () => {
+  const { runCapture } = await import('../src/core/capture.ts');
+  const { prBody } = await import('../src/core/issues.ts');
+  const { kaneShareLink } = await import('../src/core/kane.ts');
+  const p = shop();
+  const input = { text: 'My cart still has the mug after I placed the order', source: 'github', ref: '#5' };
+  const draft = (title: string) => ({ enough_detail: true, title, start: '/', tags: ['cart'], steps, expect });
+
+  process.env.FAKE_KANE_FAIL = 'Check the expected outcome';
+  const red = await runCapture(p, input, { draft: draft('An order leaves the cart empty'), confirmed: { by: 'maya', failedAt: 'Check the expected outcome' } });
+  delete process.env.FAKE_KANE_FAIL;
+  assert.ok(red.run?.kane?.shareUrl, 'Kane gave a link');
+  assert.equal(red.run?.kane?.committed, false);
+  assert.equal(kaneShareLink(red.run?.kane), undefined, 'which would show an earlier pass, not this failure');
+  assert.match(prBody(p, undefined, red.bug!, red.run), /\| 🔴 Before \| `RUN-[^`]+` \|/);
+
+  const green = await runCapture(p, input, { draft: draft('Checking out clears the cart') });
+  assert.equal(green.run?.kane?.committed, true);
+  assert.equal(kaneShareLink(green.run?.kane), green.run?.kane?.shareUrl);
+  assert.equal(kaneShareLink({ status: 'failed', shareUrl: 'https://x.example' }), undefined, 'older records go by the status');
 });
 
 test("only Gremlin's own dispute comment is read back, never a look-alike", async () => {

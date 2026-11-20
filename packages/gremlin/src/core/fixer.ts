@@ -7,10 +7,10 @@ import type { Project } from './config.ts';
 import { getFlow, listFlows, moveFlow, updateFlowMeta, type Flow } from './flow.ts';
 import { protectedMatcher } from './guardrails.ts';
 import { endJob, startJob, type Job } from './jobs.ts';
-import { ensureDir } from './paths.ts';
+import { ensureDir, type ProjectPaths } from './paths.ts';
 import { describeRun, runFlow, silentReporter, type Reporter } from './runner.ts';
 import { changedSince, diffStat, restoreGuarded, revertFiles, takeSnapshot } from './snapshot.ts';
-import { emit, getBug, getRun, lockFlow, saveBug, type BugRecord, type FixAttempt, type RunRecord } from './store.ts';
+import { emit, getBug, getRun, lockFlow, saveBug, unlockFlow, type BugRecord, type FixAttempt, type RunRecord } from './store.ts';
 import { onInterrupt } from './interrupt.ts';
 import { ensureApp, restartApp } from './target.ts';
 import { nowIso, round } from './util.ts';
@@ -260,6 +260,13 @@ export async function runFixer(project: Project, bugId: string, opts: FixOptions
   }
 }
 
+/** Moves a repro into regression/ and drops the lock under its old id; the caller locks it where it now lives. */
+function toRegression(paths: ProjectPaths, flow: Flow, patch: Parameters<typeof moveFlow>[3]): Flow {
+  const moved = moveFlow(paths, flow, 'regression', patch);
+  if (moved.id !== flow.id) unlockFlow(paths, flow.id);
+  return moved;
+}
+
 /** Accepted: the flow joins the regression library and Guard replays it from now on. Returns the flow where it now lives. */
 export function acceptFix(project: Project, bug: BugRecord, flow: Flow, related: Flow[], by: string): Flow {
   const { paths } = project;
@@ -270,11 +277,11 @@ export function acceptFix(project: Project, bug: BugRecord, flow: Flow, related:
   const kept =
     flow.type === 'regression'
       ? updateFlowMeta(flow, { status: 'active', fail_first: failFirst })
-      : moveFlow(paths, flow, 'regression', { status: 'active', fail_first: failFirst, bug: bug.id });
+      : toRegression(paths, flow, { status: 'active', fail_first: failFirst, bug: bug.id });
   lockFlow(paths, kept, by);
   // Other repros of this bug (a captured report, a second attack) passed too: they guard it from now on as well.
   for (const sib of related.filter((f) => f.bug === bug.id && f.status !== 'active')) {
-    const s = sib.type === 'regression' ? updateFlowMeta(sib, { status: 'active' }) : moveFlow(paths, sib, 'regression', { status: 'active' });
+    const s = sib.type === 'regression' ? updateFlowMeta(sib, { status: 'active' }) : toRegression(paths, sib, { status: 'active' });
     lockFlow(paths, s, by);
   }
   if (kept.id !== bug.flowId) {
@@ -312,7 +319,7 @@ export async function verifyBug(project: Project, bugId: string, reporter: Repor
       const moved =
         flow.type === 'regression'
           ? updateFlowMeta(flow, { status: 'active', fail_first: flow.fail_first ?? bug.runs[0] })
-          : moveFlow(project.paths, flow, 'regression', { status: 'active', fail_first: flow.fail_first ?? bug.runs[0], bug: bug.id });
+          : toRegression(project.paths, flow, { status: 'active', fail_first: flow.fail_first ?? bug.runs[0], bug: bug.id });
       lockFlow(project.paths, moved, 'verify');
       bug.flowId = moved.id;
     }

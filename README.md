@@ -17,6 +17,7 @@
 
 <p align="center">
   <a href="#see-it-working">See it working</a> ·
+  <a href="#for-judges">For judges</a> ·
   <a href="#one-bug-end-to-end">One bug, end to end</a> ·
   <a href="#quickstart">Quickstart</a> ·
   <a href="#try-it-on-kiln">Try it on the demo shop</a> ·
@@ -174,6 +175,29 @@ tags: [checkout, coupon]
 Gremlin compiles each flow to a Kane `_test.md` (one `## Step` per line, the expectations become Kane assertions) and runs
 `kane-cli testmd run … --agent --headless`. Persona logins are passed as Kane `--variables`, never written to disk.
 
+## For judges
+
+Four ways to check Gremlin, from nothing to install to a full loop. None of them needs our credentials: Kane runs on
+your own TestMu AI account, and the coding agent on your own login.
+
+1. **Read the evidence, no setup.** [`docs/proof.md`](docs/proof.md) links every claim to a public issue, Actions run,
+   pull request or committed record, and has a 2-minute checklist.
+2. **Browse the recorded session, no Kane runs.** After the [Quickstart](#quickstart) build:
+   `cd docs/demo-run && gremlin dash` opens all 43 runs, the bugs, Claude Code's fix packages and Kane's screenshots.
+3. **Run Kane, no coding agent.** In [`examples/kiln`](examples/kiln), `gremlin doctor` then `gremlin run --all`
+   replays the shop's 3 happy flows from the Kane recordings committed with it. Gremlin starts the shop itself.
+4. **The full loop.** With Claude Code (or Codex, Cursor or Gemini) signed in, follow [Try it on Kiln](#try-it-on-kiln):
+   `gremlin capture` with the sample complaint, then `gremlin fix`. In our runs one bug took about 50 to 110 Kane
+   credits from report to proven fix.
+
+To see the GitHub Action, fork [kiln-shop](https://github.com/SCARPxVeNOM/kiln-shop) and:
+- turn on Issues;
+- allow Actions to create pull requests (Settings → Actions → General);
+- add the `LT_USERNAME`, `LT_ACCESS_KEY` and `CLAUDE_CODE_OAUTH_TOKEN` secrets (the last from `claude setup-token`);
+- label an issue `gremlin`.
+
+If the run can't settle it, it asks you on the issue.
+
 ## Quickstart
 
 You need Node 20+, Chrome, and [Kane CLI](https://www.npmjs.com/package/@testmuai/kane-cli) signed in.
@@ -293,8 +317,9 @@ The point of Gremlin is that **Kane's verdict always flows back to an agent**, a
 
 - **Flows are protected.** A `PreToolUse` hook denies edits to `.gremlin/flows/**`, `.gremlin/locks/**` and
   `gremlin.config.yaml`. After every Fixer attempt, any change to a protected path is reverted and recorded.
-- **Flows are locked.** Each approved flow is hashed into its own file under `.gremlin/locks/`. Guard blocks on a flow
-  whose meaning changed without a human approving it, so weakening an expectation fails the build.
+- **Flows are locked.** Each approved flow is hashed into its own file under `.gremlin/locks/`, with its status and
+  tags. Guard blocks on a flow whose meaning changed without a human approving it, and on one quietly switched off or
+  stripped of the tag Guard picks it by, so weakening an expectation or hiding a flow fails the build.
 - **Fail first.** A captured repro only becomes a bug once Kane has watched it fail. A fix only counts once Kane has
   watched the same flow pass.
 - **Kane triage filters noise.** Failures Kane attributes to the automation, not the product, are held for review.

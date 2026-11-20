@@ -7,6 +7,7 @@ import { CONFIRM_LABEL, commentOnIssue, originRepo, reproFromComment, runCapture
 import type { Project } from './config.ts';
 import { runFixer, type FixResult } from './fixer.ts';
 import { getFlow, type Flow } from './flow.ts';
+import { kaneShareLink } from './kane.ts';
 import { ensureDir } from './paths.ts';
 import { redactText } from './redact.ts';
 import { silentReporter, type Reporter } from './runner.ts';
@@ -418,7 +419,10 @@ export function prBody(
   const afterRun = passing?.runId ? getRun(project.paths, passing.runId) : undefined;
   const flow: Flow | undefined = getFlow(project.paths, bug.flowId);
   const tries = bug.attempts.filter((a) => a.result !== 'pending').length;
-  const runLink = (run?: RunRecord) => (run ? (run.kane?.shareUrl ? `[${run.id}](${run.kane.shareUrl})` : `\`${run.id}\``) : 'n/a');
+  const runLink = (run?: RunRecord) => {
+    const link = kaneShareLink(run?.kane);
+    return run ? (link ? `[${run.id}](${link})` : `\`${run.id}\``) : 'n/a';
+  };
   const k = failFirst?.kane;
   const found = issue
     ? `Gremlin reproduced [#${issue.number}](${issue.url})`

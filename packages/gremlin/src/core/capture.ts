@@ -5,7 +5,7 @@ import { mapProduct } from './discover.ts';
 import { brokenContract, lintFlow, saveFlow, updateFlowMeta, type Flow } from './flow.ts';
 import { flowSafetyIssues } from './guardrails.ts';
 import { endJob, startJob, type Job } from './jobs.ts';
-import { isAutomationFault } from './kane.ts';
+import { isAutomationFault, kaneShareLink } from './kane.ts';
 import { redact } from './redact.ts';
 import { FLOW_RULES, reviseFlow, shouldRevise } from './revise.ts';
 import { findDuplicateBug } from './dedupe.ts';
@@ -334,7 +334,8 @@ export function commentOnIssue(project: Project, result: CaptureResult, ref: str
       const pct = (v: typeof other) => (v?.confidence !== undefined ? ` (${Math.round(v.confidence * 100)}%)` : '');
       lines.push(`**Kane's two runs disagreed:** ${k.verdict.family}${pct(k.verdict)} on one, ${other.family}${pct(other)} on the other. The more confident verdict stands.`);
     }
-    if (k.shareUrl) lines.push(`**Evidence:** [Kane run](${k.shareUrl})`);
+    const link = kaneShareLink(k);
+    if (link) lines.push(`**Evidence:** [Kane run](${link})`);
   }
   if (result.questions.length && !result.dispute) lines.push('', '**To reproduce, we need:**', ...result.questions.map((q) => `- ${q}`));
   const r = runGh(['issue', 'comment', ref.replace(/^#/, ''), '--body', lines.join('\n')], project.root);

@@ -135,9 +135,12 @@ which failures are bugs, and a bug it files goes through the same Fixer.
   `.gremlin/locks/**`, `gremlin.config.yaml` and your `protected_paths` are off limits. Claude Code's `PreToolUse` hook
   denies the edit up front, and the Fixer puts back any change after every attempt, whichever agent made it.
 - **The lock hash** ([`store.ts`](../packages/gremlin/src/core/store.ts), [`flow.ts`](../packages/gremlin/src/core/flow.ts)).
-  `semanticHash` covers a flow's title, start page, account, steps and expectations. Capture locks the repro when it
-  files the bug, and the Fixer locks the regression flow when the fix passes. Guard blocks any locked flow whose hash
-  has changed, until a human runs `gremlin flows approve`.
+  `semanticHash` covers a flow's title, start page, account, steps and expectations. The lock also records the flow's
+  status and tags, because Guard replays only active flows and picks them by tag: a flow switched off or stripped of a
+  tag stops guarding anything while its hash stays the same. Capture and the Breaker lock a repro when they file the
+  bug, and the Fixer locks the regression flow when the fix passes (and drops the lock under the repro's old name).
+  Guard blocks any locked flow whose hash changed, that is no longer active, or that lost a tag, until a human runs
+  `gremlin flows approve`. When Gremlin quarantines a flaky flow itself, it records that in the lock.
 - **Before every Kane run**, `runFlow` refuses production targets, flows that would move real money or send real
   messages, and runs over the daily or per-bug credit budget.
 
@@ -168,8 +171,9 @@ which failures are bugs, and a bug it files goes through the same Fixer.
 1. `selectFlows` drops changes under `.gremlin/`, matches the rest against the globs in `guard.areas`, and picks the
    active flows tagged with an area that was hit. If the change touches no mapped area, `guard.fallback` decides:
    replay everything (the default) or nothing.
-2. `tamperedFlows` compares every flow in the library with its lock. A locked flow edited without a human is a
-   blocking result even if the change didn't touch its area: changing what is tested is never a fix.
+2. `tamperedFlows` compares every flow in the library with its lock. A locked flow edited, switched off or stripped of
+   a tag without a human is a blocking result even if the change didn't touch its area: changing what is tested is
+   never a fix.
 3. Kane replays the selected flows, one at a time when `app.reset` is set (they share the test data), otherwise
    `guard.concurrency` at a time.
 4. A failure reopens the bug its flow guards and marks it a regression, or files a new bug. A passing regression flow

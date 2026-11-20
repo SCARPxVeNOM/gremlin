@@ -45,7 +45,10 @@ export interface KaneRunResult {
   credits: number;
   durationS: number;
   sessionId?: string;
+  /** Kane's link to the test in Test Manager; use kaneShareLink(), since it opens the test's latest saved version */
   shareUrl?: string;
+  /** whether this run saved a new version of the test, which Kane does only when the run passes */
+  committed?: boolean;
   evidencePack?: string;
   replayed: number;
   authored: number;
@@ -221,6 +224,7 @@ export async function runKaneTest(opts: KaneRunOptions): Promise<KaneRunResult> 
         result.replayed = o.steps?.replay_decisions ?? 0;
         result.authored = o.steps?.author_decisions ?? 0;
         result.healed = Boolean(o.adaptive_heal?.triggered);
+        if (o.commit) result.committed = Boolean(o.commit.committed);
         if (o.share_url) result.shareUrl = o.share_url;
         break;
       case 'coverage':
@@ -335,6 +339,16 @@ function toVerdict(o: any): KaneVerdict {
 }
 
 /** True when Kane judged the failure to be the test's or the automation's fault, not the product's. */
+/**
+ * Kane's share link opens the test at its latest saved version, and only a passing run saves one. So the link shows
+ * this run only if this run saved that version: a failed run's link would show an earlier pass, never the failure.
+ * Records from before `committed` was kept fall back on the run's status.
+ */
+export function kaneShareLink(kane?: Pick<KaneRunResult, 'shareUrl' | 'committed' | 'status'>): string | undefined {
+  if (!kane?.shareUrl) return undefined;
+  return (kane.committed ?? kane.status === 'passed') ? kane.shareUrl : undefined;
+}
+
 export function isAutomationFault(v?: KaneVerdict): boolean {
   return Boolean(v && v.family && /automation|test_|config|environment|infra/i.test(v.family));
 }
