@@ -1,4 +1,4 @@
-# Gremlin: local run artifacts (flows, lock, bugs and Kane recordings are committed)
+# Gremlin: local run artifacts (flows, locks, bugs and Kane recordings are committed)
 runs/
 evidence/
 reports/

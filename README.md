@@ -74,7 +74,7 @@ and prompt below is in [`docs/demo-run`](docs/demo-run).
    restored the fix, and Kane passed all 5 flows. Replaying that flow now costs 0 credits.
 
 The flow Claude Code drafted from the complaint. `fail_first` is the Kane run that watched it fail, and the flow is
-hashed into `.gremlin/lock.json`, so no agent can quietly weaken it later:
+hashed into a lock file under `.gremlin/locks/`, so no agent can quietly weaken it later:
 
 ```markdown
 ---
@@ -263,10 +263,10 @@ The point of Gremlin is that **Kane's verdict always flows back to an agent**, a
 
 ### An agent can't cheat its way to green
 
-- **Flows are protected.** A `PreToolUse` hook denies edits to `.gremlin/flows/**`, `.gremlin/lock.json` and
+- **Flows are protected.** A `PreToolUse` hook denies edits to `.gremlin/flows/**`, `.gremlin/locks/**` and
   `gremlin.config.yaml`. After every Fixer attempt, any change to a protected path is reverted and recorded.
-- **Flows are locked.** Approved flows are hashed into `.gremlin/lock.json`. Guard blocks on a flow whose meaning changed
-  without a human approving it, so weakening an expectation fails the build.
+- **Flows are locked.** Each approved flow is hashed into its own file under `.gremlin/locks/`. Guard blocks on a flow
+  whose meaning changed without a human approving it, so weakening an expectation fails the build.
 - **Fail first.** A captured repro only becomes a bug once Kane has watched it fail. A fix only counts once Kane has
   watched the same flow pass.
 - **Kane triage filters noise.** Failures Kane attributes to the automation, not the product, are held for review.
@@ -304,6 +304,7 @@ The point of Gremlin is that **Kane's verdict always flows back to an agent**, a
 | `gremlin fix <bug> [--mode suggest\|approve\|autonomous]` | Hand a bug to your agent; Kane proves the fix |
 | `gremlin arena <bug> [--agents a,b,c]` | Agent arena: agents compete on the same bug; Kane picks the smallest passing fix |
 | `gremlin pr <bug>` | Open a pull request for a fixed bug: the fix, its locked regression flow, Kane's before and after |
+| `gremlin pull` | `git pull` after a Gremlin pull request merges (a plain pull refuses while Gremlin's own copies of the merged records are in the way) |
 | `gremlin verify <bug>` | Re-run a bug's flow after a fix made outside Gremlin |
 | `gremlin guard [--all] [--base origin/main] [--ci]` | Replay the flows a change touches; exit 1 on failure |
 | `gremlin flows list\|show\|new\|approve\|retire` | Manage the flow library |
@@ -367,7 +368,7 @@ breaker: { categories: [input, timing, navigation, state, accessibility], max_fl
 budget: { per_run: 600, per_day: 3000, per_bug: 600 }
 protected_paths: ["src/payments/**"]
 contracts:                     # product-wide rules Kane checks at the end of every flow
-  - Every price shows a dollar sign and two decimals, like $12.00
+  - Every product price and cart line price shows a dollar sign and two decimals, like $12.00
   - { rule: "Nothing the shopper typed is shown as HTML formatting", tags: [search] }
 kane: { headless: true, max_steps: 40, bug_detection: continue }
 ```
@@ -378,8 +379,19 @@ search can break the "no HTML" rule even though nobody wrote that expectation in
 recorded as the contract it broke, and the agent's fix package says which rule and that the fix may belong in shared
 code. Contracts live in `gremlin.config.yaml`, which agents can't edit.
 
-What lives in `.gremlin/`: `flows/{happy,adversarial,regression}`, `bugs/`, `lock.json` and `kane/` (compiled tests and
+Kane applies a rule literally, to whatever page a flow ends on, so name exactly what it covers. *"Every price on the
+page is in US dollars with two decimals"* failed on a footer that said "Free shipping over $60", and a rule listing
+the line total, subtotal, discount and order total failed on a search page that has none of them. *"Every product
+price and cart line price shows a dollar sign and two decimals"* says which prices it means, and a rule about order
+totals belongs on the flows that reach checkout (`tags: [checkout]`). `gremlin doctor` warns about rules worded too
+broadly: "on the page" or "anywhere" with no part of the page named, long lists of things that may not all be there,
+and words like "properly" or "looks good" that don't say what to check.
+
+What lives in `.gremlin/`: `flows/{happy,adversarial,regression}`, `bugs/`, `locks/` and `kane/` (compiled tests and
 Kane's replay recordings) are committed. `runs/`, `evidence/`, `events.jsonl`, the credit ledger and stats stay local.
+Each approved flow has its own lock file, `locks/<type>/<flow>.json`, so pull requests that lock different flows never
+touch the same file. A project with the older single `lock.json` keeps working, and moves to `locks/` on its next lock
+change.
 
 ## Repository
 

@@ -6,8 +6,8 @@ import { endJob, startJob, type Job } from './jobs.ts';
 import { isAutomationFault } from './kane.ts';
 import { describeRun, runFlow, silentReporter, type Reporter } from './runner.ts';
 import { scoreConfidence, scoreSeverity } from './severity.ts';
-import { gitChangedFiles } from './snapshot.ts';
-import { bugForFlow, emit, nextBugId, saveBug, tamperedFlows, type BugRecord, type RunPurpose, type RunRecord } from './store.ts';
+import { gitChangedFiles, inHistory } from './snapshot.ts';
+import { bugForFlow, emit, listBugs, nextBugId, saveBug, tamperedFlows, type BugRecord, type RunPurpose, type RunRecord } from './store.ts';
 import { ensureApp } from './target.ts';
 import { nowIso, pool, round } from './util.ts';
 
@@ -27,7 +27,8 @@ export interface GuardOptions {
 export interface GuardResult {
   flow: Flow;
   run?: RunRecord;
-  status: 'passed' | 'failed' | 'flaky' | 'error' | 'tampered';
+  /** unmerged: Kane failed the flow, but its bug's fix is on a pull request HEAD doesn't have yet. It doesn't block. */
+  status: 'passed' | 'failed' | 'flaky' | 'error' | 'tampered' | 'unmerged';
   bug?: BugRecord;
   regression?: boolean;
 }
@@ -105,9 +106,13 @@ export async function runGuard(project: Project, opts: GuardOptions = {}): Promi
       reporter.info(`  ${run.status === 'passed' ? '✓' : run.status === 'flaky' ? '~' : '✗'} ${describeRun(run)}`);
       const result: GuardResult = { flow, run, status: run.status === 'running' ? 'error' : run.status };
       if (run.status === 'failed') {
-        const { bug, regression } = recordGuardFailure(project, flow, run, job);
+        const { bug, regression, unmerged } = recordGuardFailure(project, flow, run, job);
         result.bug = bug;
         result.regression = regression;
+        if (unmerged) {
+          result.status = 'unmerged';
+          reporter.info(`  ⏳ Not a regression: ${unmergedFix(bug)}`);
+        }
       } else if (run.status === 'passed' && flow.type === 'regression') {
         result.bug = recordRegressionPass(project, flow, run, job);
       }
@@ -117,12 +122,17 @@ export async function runGuard(project: Project, opts: GuardOptions = {}): Promi
     report.blocking = report.results.some((r) => r.status === 'failed' || r.status === 'error' || r.status === 'tampered');
     report.durationS = round((Date.now() - started) / 1000);
     report.credits = round(report.credits, 2);
-    const failed = report.results.filter((r) => r.status !== 'passed' && r.status !== 'flaky').length;
+    const waiting = report.results.filter((r) => r.status === 'unmerged').length;
+    const failed = report.results.filter((r) => r.status !== 'passed' && r.status !== 'flaky').length - waiting;
     endJob(
       paths,
       job,
       report.blocking ? 'failed' : 'passed',
-      report.blocking ? `${failed} of ${report.results.length} flows failed` : `All ${report.results.length} flows verified by Kane`,
+      report.blocking
+        ? `${failed} of ${report.results.length} flows failed`
+        : waiting
+          ? `${report.results.length - waiting} of ${report.results.length} flows verified by Kane; ${waiting} wait${waiting === 1 ? 's' : ''} on a fix that isn't merged yet`
+          : `All ${report.results.length} flows verified by Kane`,
       { credits: report.credits, failed },
     );
     return report;
@@ -149,13 +159,22 @@ function recordRegressionPass(project: Project, flow: Flow, run: RunRecord, job:
   return bug;
 }
 
-/** A failing guarded flow either reopens the bug it was guarding (a regression) or opens a new one. */
-function recordGuardFailure(project: Project, flow: Flow, run: RunRecord, job: Job): { bug: BugRecord; regression: boolean } {
+/**
+ * A failing guarded flow either reopens the bug it was guarding (a regression) or opens a new one. Unless that bug's
+ * fix is on a pull request this checkout doesn't have yet: then the flow fails because the fix isn't here, and the
+ * bug is left as it is.
+ */
+function recordGuardFailure(project: Project, flow: Flow, run: RunRecord, job: Job): { bug: BugRecord; regression: boolean; unmerged?: boolean } {
   const { paths } = project;
   const contract = brokenContract(flow, project.config, { heading: run.kane?.failedStep?.heading, reason: run.kane?.reason });
-  const known = bugForFlow(paths, flow);
   // the same flow breaking a different product rule is a different bug, not more evidence for this one
-  const existing = known && (!known.contract || !contract || known.contract === contract) ? known : undefined;
+  const sameRule = (b: BugRecord) => !b.contract || !contract || b.contract === contract;
+  const known = bugForFlow(paths, flow);
+  const existing = known && sameRule(known) ? known : listBugs(paths).find((b) => b.flowId === flow.id && b.contract === contract);
+  if (existing?.status === 'fixed' && existing.pr && !inHistory(project.root, existing.pr.sha)) {
+    emit(paths, 'info', `${flow.title} fails until ${existing.id}'s fix is merged (${existing.pr.url})`, { bugId: existing.id, runId: run.id, pr: existing.pr.url }, job.id);
+    return { bug: existing, regression: false, unmerged: true };
+  }
   if (existing) {
     const regression = existing.status === 'fixed';
     existing.status = 'confirmed';
@@ -196,10 +215,18 @@ function recordGuardFailure(project: Project, flow: Flow, run: RunRecord, job: J
   return { bug, regression: flow.type === 'regression' };
 }
 
+/** Why an unmerged result doesn't block, naming the pull request it waits for. */
+export function unmergedFix(bug: BugRecord): string {
+  return `${bug.id}'s fix isn't merged yet (${bug.pr?.url})`;
+}
+
 /** The Guard result as a brief for a coding agent (used by hooks, MCP and CI). */
 export function guardBrief(project: Project, report: GuardReport): string {
   const bad = report.results.filter((r) => r.status === 'failed' || r.status === 'error' || r.status === 'tampered');
+  // nothing for an agent to fix: the fix exists, on a pull request
+  const waiting = report.results.filter((r) => r.status === 'unmerged').map((r) => `Not blocking: "${r.flow.title}" failed only because ${unmergedFix(r.bug!)}. It is not a regression.`);
   if (!bad.length) {
+    if (waiting.length) return [`Gremlin Guard: ${report.results.length - waiting.length} of ${report.results.length} relevant flows passed in a real browser (verified by Kane CLI).`, ...waiting].join('\n');
     return `Gremlin Guard: all ${report.results.length} relevant flows passed in a real browser (verified by Kane CLI).`;
   }
   const parts = [
@@ -216,11 +243,12 @@ export function guardBrief(project: Project, report: GuardReport): string {
     parts.push(failureBrief(project, r.flow, r.run!));
     parts.push('');
   }
+  parts.push(...waiting);
   return parts.join('\n');
 }
 
 export function guardMarkdown(project: Project, report: GuardReport): string {
-  const icon = (s: string) => ({ passed: '✅', failed: '❌', flaky: '🟡', error: '⚠️', tampered: '⛔' })[s] ?? '•';
+  const icon = (s: string) => ({ passed: '✅', failed: '❌', flaky: '🟡', error: '⚠️', tampered: '⛔', unmerged: '⏳' })[s] ?? '•';
   const lines = [
     `## 👹 Gremlin Guard: ${report.blocking ? 'blocked' : 'passed'}`,
     '',
@@ -230,7 +258,7 @@ export function guardMarkdown(project: Project, report: GuardReport): string {
     '| --- | --- | --- | --- |',
     ...report.results.map(
       (r) =>
-        `| ${icon(r.status)} | ${r.flow.title} | ${r.flow.type} | ${r.run ? describeRun(r.run).replace(/\|/g, '\\|') : r.status}${r.regression ? ' **(regression)**' : ''}${r.run?.kane?.shareUrl ? ` · [evidence](${r.run.kane.shareUrl})` : ''} |`,
+        `| ${icon(r.status)} | ${r.flow.title} | ${r.flow.type} | ${r.run ? describeRun(r.run).replace(/\|/g, '\\|') : r.status}${r.regression ? ' **(regression)**' : ''}${r.status === 'unmerged' ? ` **(not a regression: ${unmergedFix(r.bug!)})**` : ''}${r.run?.kane?.shareUrl ? ` · [evidence](${r.run.kane.shareUrl})` : ''} |`,
     ),
   ];
   return lines.join('\n') + '\n';

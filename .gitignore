@@ -7,3 +7,5 @@ dist/
 !.env.example
 # Kane CLI local session data
 .testmuai/
+# Claude Code agent worktrees
+.claude/worktrees/

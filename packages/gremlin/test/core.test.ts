@@ -251,3 +251,28 @@ test('behaviour contracts are checked in their own step at the end of every flow
   assert.equal(brokenContract(searchFlow, p.config, { heading: 'Product rule 1: Every price shows a dollar sign and two decimals, like $12.00' }), 'Every price shows a dollar sign and two decimals, like $12.00');
   assert.equal(brokenContract(searchFlow, p.config, { heading: 'Check the expected outcome', reason: 'x' }), undefined, "the flow's own expectations are not a contract");
 });
+
+test('doctor warns about contracts worded so broadly that Kane would apply them where they make no sense', async () => {
+  const { lintContract } = await import('../src/core/flow.ts');
+  const messages = (rule: string) => lintContract(rule).map((i) => i.message);
+
+  // the two rules that failed in real runs: a footer's "Free shipping over $60", and a search page with no totals
+  assert.deepEqual(messages('Every price on the page is in US dollars with two decimals'), ['"on the page" makes Kane check everything it can see, banners and footers included']);
+  assert.match(lintContract('Every price on the page is in US dollars with two decimals')[0].hint, /name the part it covers/);
+  assert.deepEqual(messages('The line total, subtotal, discount and order total always add up'), ['lists 4 things, and Kane may expect all of them on every page it checks']);
+  assert.deepEqual(messages('Name, email, and phone fields have labels'), ['lists 3 things, and Kane may expect all of them on every page it checks']);
+  assert.match(messages('No error shows anywhere')[0], /"anywhere"/);
+  assert.deepEqual(messages('The checkout page looks good'), ['"looks good" doesn\'t say what Kane should look for']);
+  assert.match(messages('Totals are calculated correctly')[0], /"correctly"/);
+
+  // rules that name what they cover are left alone
+  for (const fine of [
+    'Every product price and cart line price shows a dollar sign and two decimals, like $12.00',
+    'Every price shows a dollar sign and two decimals, like $12.00',
+    'Nothing the shopper typed is shown as HTML formatting',
+    'No error message appears anywhere in the checkout form',
+    'Every price on the page inside the order summary shows two decimals',
+    'When a coupon applies, the total drops and a message says so',
+    'If the cart is empty, the checkout button is greyed out, and a message explains why',
+  ]) assert.deepEqual(lintContract(fine), [], fine);
+});

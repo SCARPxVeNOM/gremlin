@@ -105,7 +105,7 @@ kane:
 `;
 }
 
-const GITIGNORE = `# Gremlin: local run artifacts (flows, lock, bugs and Kane recordings are committed)
+const GITIGNORE = `# Gremlin: local run artifacts (flows, locks, bugs and Kane recordings are committed)
 runs/
 evidence/
 reports/

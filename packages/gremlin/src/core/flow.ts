@@ -271,6 +271,60 @@ export function lintFlow(f: Pick<Flow, 'title' | 'steps' | 'expect'>): FlowIssue
   return issues;
 }
 
+// Contracts are checked by Kane on whatever page a flow ends on, and Kane reads a rule literally: "every price on the
+// page" took in a footer's "Free shipping over $60", and a rule listing four totals failed on a search page with none.
+
+export interface ContractIssue {
+  message: string;
+  hint: string;
+}
+
+const PAGE_WIDE = /\b(?:(?:on|across) (?:the|this|that|any|every|each) (?:page|screen|site)|on screen|(?:the )?(?:whole|entire) (?:page|screen|site)|anywhere|everywhere|(?:site|page)[- ]?wide)\b/gi;
+// "in the cart summary", "on each product card": the rule says which part of the page it means
+const ANCHOR = /\b(?:in|inside|within|under|on|below|above|beside) (?:the|each|every|any|a|an|its|their) (?!(?:format|style|same|right|correct|usual|form of|way)\b)[a-z]/i;
+const VAGUE = /\b(properly|correctly|appropriately|reasonably|nicely|as expected|as intended|user[- ]friendly|intuitive(?:ly)?|looks? (?:good|right|fine|ok|okay|nice|correct|clean))\b/i;
+
+/** Heuristic warnings for a behaviour contract worded so broadly that Kane will likely fail it where it doesn't apply. */
+export function lintContract(rule: string): ContractIssue[] {
+  const issues: ContractIssue[] = [];
+  const pageWide = rule.match(PAGE_WIDE);
+  if (pageWide && !ANCHOR.test(rule.replace(PAGE_WIDE, ''))) {
+    issues.push({
+      message: `"${pageWide[0]}" makes Kane check everything it can see, banners and footers included`,
+      hint: 'name the part it covers, e.g. "in the cart summary"',
+    });
+  }
+  const listed = longestList(rule);
+  if (listed >= 3) {
+    issues.push({
+      message: `lists ${listed} things, and Kane may expect all of them on every page it checks`,
+      hint: 'one rule per thing, or tag it to the flows that end where they all show',
+    });
+  }
+  const vague = VAGUE.exec(rule);
+  if (vague) issues.push({ message: `"${vague[1]}" doesn't say what Kane should look for`, hint: 'say what a person would check, e.g. "shows two decimals"' });
+  return issues;
+}
+
+/** Items in the longest "a, b, c and d" run in the rule (0 when there's none). */
+function longestList(rule: string): number {
+  const short = (s: string) => s.trim().split(/\s+/).length <= 3;
+  let best = 0;
+  // a full stop ends a clause, a decimal point ("$12.00") doesn't
+  for (const clause of rule.split(/[;:]|\.(?!\d)/)) {
+    const parts = clause.split(',');
+    // at least one item between commas: "When a coupon applies, the total drops and a message says so" is no list
+    if (parts.length < 3) continue;
+    const last = parts[parts.length - 1].trim();
+    const and = /^(.*?)\band\b/.exec(last);
+    if (!and) continue;
+    const oxford = !and[1].trim(); // "a, b, and c"
+    if (!parts.slice(1, -1).every(short) || (!oxford && !short(and[1]))) continue;
+    best = Math.max(best, parts.length + (oxford ? 0 : 1));
+  }
+  return best;
+}
+
 // ---------------------------------------------------------------------------
 // Compile a Gremlin flow into a Kane CLI _test.md
 

@@ -1,6 +1,6 @@
 import { spawnSync } from 'node:child_process';
-import { copyFileSync, existsSync } from 'node:fs';
-import { extname, join, relative } from 'node:path';
+import { copyFileSync, existsSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { dirname, extname, join, relative } from 'node:path';
 import { CONNECTORS } from './agent.ts';
 import { arenaMarkdown, runArena, type ArenaResult } from './arena.ts';
 import { commentOnIssue, originRepo, runCapture, runGh, type CaptureResult } from './capture.ts';
@@ -11,7 +11,7 @@ import { ensureDir } from './paths.ts';
 import { redactText } from './redact.ts';
 import { silentReporter, type Reporter } from './runner.ts';
 import { uncommittedChanges } from './snapshot.ts';
-import { emit, getBug, getRun, reserveOpenFixBranches, type BugRecord, type RunRecord } from './store.ts';
+import { emit, getBug, getRun, lockPath, reserveOpenFixBranches, saveBug, type BugRecord, type RunRecord } from './store.ts';
 import { truncate } from './util.ts';
 
 /**
@@ -246,6 +246,7 @@ export function openFixPr(project: Project, issue: Pick<GhIssue, 'number' | 'tit
 
   mustGit(root, ['checkout', '-B', branch]);
   let committed = false;
+  let opened: NonNullable<BugRecord['pr']>;
   try {
     mustGit(root, ['add', '-A', '--', '.']);
     const who = git(root, ['config', 'user.email']).out ? [] : ['-c', 'user.name=Gremlin', '-c', 'user.email=gremlin@users.noreply.github.com'];
@@ -258,13 +259,14 @@ export function openFixPr(project: Project, issue: Pick<GhIssue, 'number' | 'tit
     const stacked = base !== defaultBranch ? `> Stacked on \`${base}\`, which isn't merged yet, so this diff shows only this fix. Merge that one first.\n\n` : '';
     const body = stacked + prBody(project, issue, bug, failFirst, { before: imageUrl(shots.before), after: imageUrl(shots.after) });
     const pr = gh(['pr', 'create', '--base', base, '--head', branch, '--title', title, '--body-file', '-'], root, body);
+    let url = pr.out.split('\n').filter(Boolean).at(-1)!;
     if (!pr.ok) {
       // a second run on the same issue: the branch was force-pushed, so the open PR already shows the new fix
       const existing = gh(['pr', 'view', branch, '--json', 'url', '--jq', '.url'], root);
-      if (existing.ok && existing.out) return existing.out;
-      throw new Error(`gh couldn't open the pull request: ${pr.err}`);
+      if (!existing.ok || !existing.out) throw new Error(`gh couldn't open the pull request: ${pr.err}`);
+      url = existing.out;
     }
-    return pr.out.split('\n').filter(Boolean).at(-1)!;
+    opened = { url, branch, sha };
   } finally {
     git(root, ['checkout', startBranch]);
     // Gremlin's records (bugs, flows, the lock) went into that commit, and leaving the branch takes them out of
@@ -274,6 +276,11 @@ export function openFixPr(project: Project, issue: Pick<GhIssue, 'number' | 'tit
       git(root, ['reset', '-q', '--', '.gremlin']);
     }
   }
+  // The commit can't hold its own sha or a PR that didn't exist yet, so the PR goes on the copy just put back. Here
+  // the fix isn't merged, and Guard must not call its failing flow a regression; the copy that merges never has it.
+  bug.pr = opened;
+  saveBug(project.paths, { ...(getBug(project.paths, bug.id) ?? bug), pr: opened });
+  return opened.url;
 }
 
 /**
@@ -294,6 +301,65 @@ export function openBugPr(project: Project, bugId: string): string {
   const failFirst = bug.runs.map((id) => getRun(project.paths, id)).find((r) => r?.status === 'failed');
   const issue = bug.report?.source === 'github' && bug.report.ref && bug.report.url ? { number: Number(bug.report.ref.replace('#', '')), title: bug.title, url: bug.report.url } : undefined;
   return openFixPr(project, issue, bug, failFirst);
+}
+
+/**
+ * `gremlin pull`: after a fix's pull request merges, a plain `git pull` refuses, because the records Gremlin put
+ * back after opening it are files the merge brings in too. A record that matches what's coming (apart from the pull
+ * request it names and when it was saved) is dropped so the pull brings it in; the rest stay. If the pull fails
+ * anyway, every dropped record is put back.
+ */
+export function pullMergedFixes(project: Project): { upstream: string; dropped: string[]; kept: string[] } {
+  const { root } = project;
+  const upstream = git(root, ['rev-parse', '--abbrev-ref', '--symbolic-full-name', '@{u}']);
+  if (!upstream.ok) throw new Error("This branch doesn't track a remote branch, so there is nothing to pull.");
+  mustGit(root, ['fetch', '--quiet']);
+  const top = mustGit(root, ['rev-parse', '--show-toplevel']);
+  // raw -z output, relative to the repo's top: trimming would eat the status column of the first entry
+  const entries = (spawnSync('git', ['status', '--porcelain=v1', '-z', '--untracked-files=all', '--', '.gremlin'], { cwd: root, encoding: 'utf8' }).stdout ?? '').split('\0').filter(Boolean);
+  const saved = new Map<string, Buffer>();
+  const kept: string[] = [];
+  for (let i = 0; i < entries.length; i++) {
+    const [code, path] = [entries[i].slice(0, 2), entries[i].slice(3)];
+    if (/^[RC]/.test(code)) i++; // a rename or copy is followed by its old path
+    if (code.includes('D') || /^[RC]/.test(code)) continue;
+    const coming = spawnSync('git', ['show', `${upstream.out}:${path}`], { cwd: top });
+    const mine = readFileSync(join(top, path));
+    if (coming.status !== 0 || !sameRecord(path, mine, coming.stdout)) {
+      kept.push(path);
+      continue;
+    }
+    saved.set(path, mine);
+    if (code !== '??') git(top, ['reset', '-q', '--', path]);
+    if (git(top, ['cat-file', '-e', `HEAD:${path}`]).ok) git(top, ['checkout', '--', path]);
+    else rmSync(join(top, path), { force: true });
+  }
+  const pulled = git(root, ['pull', '--no-edit']);
+  if (!pulled.ok) {
+    for (const [path, content] of saved) {
+      ensureDir(dirname(join(top, path)));
+      writeFileSync(join(top, path), content);
+    }
+    throw new Error(`git pull failed, so Gremlin's records are back as they were: ${pulled.err || pulled.out}`);
+  }
+  return { upstream: upstream.out, dropped: [...saved.keys()], kept };
+}
+
+/** The same record on both sides; a bug only differs in the pull request this checkout noted and when it saved it. */
+function sameRecord(path: string, mine: Buffer, coming: Buffer): boolean {
+  if (mine.equals(coming)) return true;
+  if (!/(^|\/)\.gremlin\/bugs\/[^/]+\.json$/.test(path)) return false;
+  try {
+    const strip = (b: Buffer) => {
+      const bug = JSON.parse(b.toString('utf8'));
+      delete bug.pr;
+      delete bug.updatedAt;
+      return JSON.stringify(bug);
+    };
+    return strip(mine) === strip(coming);
+  } catch {
+    return false;
+  }
 }
 
 export function prBody(
@@ -341,7 +407,7 @@ export function prBody(
     );
   }
   if (flow) {
-    lines.push('', `**The test that now guards this bug** (\`${relative(project.root, flow.path)}\`, locked in \`.gremlin/lock.json\` so no agent can weaken it):`, '');
+    lines.push('', `**The test that now guards this bug** (\`${relative(project.root, flow.path)}\`, locked in \`${relative(project.root, lockPath(project.paths, flow.id))}\` so no agent can weaken it):`, '');
     flow.steps.forEach((s, i) => lines.push(`${i + 1}. ${s}`));
     lines.push('', ...flow.expect.map((e) => `- ${e}`));
   }

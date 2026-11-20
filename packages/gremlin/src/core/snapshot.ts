@@ -39,7 +39,6 @@ function hashFile(path: string): string {
 
 function extraFiles(root: string): string[] {
   const out: string[] = [];
-  const flows = join(root, '.gremlin', 'flows');
   const visit = (dir: string) => {
     if (!existsSync(dir)) return;
     for (const e of readdirSync(dir, { withFileTypes: true })) {
@@ -48,7 +47,8 @@ function extraFiles(root: string): string[] {
       else out.push(p);
     }
   };
-  visit(flows);
+  visit(join(root, '.gremlin', 'flows'));
+  visit(join(root, '.gremlin', 'locks'));
   for (const f of ['.gremlin/lock.json', 'gremlin.config.yaml']) if (existsSync(join(root, f))) out.push(join(root, f));
   for (const e of readdirSync(root)) if (e.startsWith('.env')) out.push(join(root, e));
   return out;
@@ -129,6 +129,11 @@ export function revertFiles(snap: Snapshot, files: string[]): boolean {
 export function diffStat(root: string, files: string[]): string {
   if (!files.length || !isGitRepo(root)) return '';
   return git(root, ['diff', '--stat', '--relative', '--', ...files]).out;
+}
+
+/** Whether a commit is in HEAD's history. Only a definite "no" counts: an unknown commit or no git at all says yes. */
+export function inHistory(root: string, sha: string): boolean {
+  return spawnSync('git', ['merge-base', '--is-ancestor', sha, 'HEAD'], { cwd: root }).status !== 1;
 }
 
 export function gitChangedFiles(root: string, base?: string): string[] {

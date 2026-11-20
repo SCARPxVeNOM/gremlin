@@ -1,11 +1,11 @@
 import { spawnSync } from 'node:child_process';
-import { existsSync, readdirSync } from 'node:fs';
+import { existsSync, readdirSync, renameSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 import type { ArenaRecord } from './arena.ts';
 import type { EvidenceDigest } from './evidence.ts';
 import type { Flow, FlowType } from './flow.ts';
 import type { KaneRunResult } from './kane.ts';
-import type { ProjectPaths } from './paths.ts';
+import { ensureDir, type ProjectPaths } from './paths.ts';
 import { appendJsonl, nowIso, readJson, readJsonl, todayKey, writeJson } from './util.ts';
 
 // ---------------------------------------------------------------------------
@@ -100,6 +100,11 @@ export interface BugRecord {
   regressedAt?: string;
   /** Set when several agents competed to fix this bug and Kane judged them. */
   arena?: ArenaRecord;
+  /**
+   * The pull request with the fix, recorded on this checkout's copy (the branch's copy can't name its own commit).
+   * Until `sha` is in HEAD's history, Guard reads a failing flow as the fix not being merged, not as a regression.
+   */
+  pr?: { url: string; branch: string; sha: string };
   credits: number;
 }
 
@@ -288,25 +293,76 @@ export function stability(s?: FlowStats): number | null {
 
 // ---------------------------------------------------------------------------
 // Lock: the hash of every confirmed flow. Guard refuses a flow edited without a human approving it.
+// Each flow's lock is a file of its own, .gremlin/locks/<type>/<stem>.json: every fix pull request locks a flow, and
+// with one shared lock.json, two open pull requests made from the same commit conflicted when the second was merged.
+
+export interface LockEntry {
+  hash: string;
+  approvedAt: string;
+  by: string;
+}
 
 export interface Lock {
-  flows: Record<string, { hash: string; approvedAt: string; by: string }>;
+  flows: Record<string, LockEntry>;
+}
+
+const lockFile = (dir: string, flowId: string) => join(dir, ...flowId.split('/')) + '.json';
+
+/** Where a flow's lock lives, e.g. .gremlin/locks/regression/coupon-codes-ignore-case.json */
+export function lockPath(paths: ProjectPaths, flowId: string): string {
+  return lockFile(paths.locks, flowId);
+}
+
+function perFlowLocks(paths: ProjectPaths): Lock['flows'] {
+  const flows: Lock['flows'] = {};
+  if (!existsSync(paths.locks)) return flows;
+  for (const type of readdirSync(paths.locks, { withFileTypes: true })) {
+    if (!type.isDirectory()) continue;
+    for (const file of readdirSync(join(paths.locks, type.name)).sort()) {
+      if (!file.endsWith('.json')) continue;
+      const entry = readJson<LockEntry | undefined>(join(paths.locks, type.name, file), undefined);
+      if (entry?.hash) flows[`${type.name}/${file.slice(0, -'.json'.length)}`] = entry;
+    }
+  }
+  return flows;
 }
 
 export function readLock(paths: ProjectPaths): Lock {
-  return readJson<Lock>(paths.lock, { flows: {} });
+  const flows = perFlowLocks(paths);
+  // An older project's lock.json counts only until a flow has a lock file of its own. After that it's ignored, so one
+  // left behind (checking out a branch that still has it can bring it back) can't revive a lock that was removed since.
+  if (Object.keys(flows).length) return { flows };
+  return { flows: readJson<Partial<Lock>>(paths.legacyLock, {}).flows ?? {} };
+}
+
+/** Move an older project's lock.json into per-flow files, then remove it. Runs before any lock change. */
+function migrateLegacyLock(paths: ProjectPaths): void {
+  if (!existsSync(paths.legacyLock)) return;
+  if (!Object.keys(perFlowLocks(paths)).length) {
+    // Built aside and moved into place at once: a half-written locks/ would hide the rest of lock.json for good.
+    // Entries are copied as they are, so two branches that each migrate write identical files and still merge cleanly.
+    const tmp = `${paths.locks}.${process.pid}.tmp`;
+    rmSync(tmp, { recursive: true, force: true });
+    for (const [id, entry] of Object.entries(readLock(paths).flows)) {
+      const parts = id.split('/');
+      if (parts.length === 2 && parts.every((s) => s && s !== '.' && s !== '..')) writeJson(lockFile(tmp, id), entry);
+    }
+    ensureDir(tmp);
+    rmSync(paths.locks, { recursive: true, force: true }); // holds no locks: at most empty folders
+    renameSync(tmp, paths.locks);
+  }
+  rmSync(paths.legacyLock, { force: true });
 }
 
 export function lockFlow(paths: ProjectPaths, flow: Flow, by: string): void {
-  const lock = readLock(paths);
-  lock.flows[flow.id] = { hash: flow.hash, approvedAt: nowIso(), by };
-  writeJson(paths.lock, lock);
+  migrateLegacyLock(paths);
+  const entry: LockEntry = { hash: flow.hash, approvedAt: nowIso(), by };
+  writeJson(lockPath(paths, flow.id), entry);
 }
 
 export function unlockFlow(paths: ProjectPaths, flowId: string): void {
-  const lock = readLock(paths);
-  delete lock.flows[flowId];
-  writeJson(paths.lock, lock);
+  migrateLegacyLock(paths);
+  rmSync(lockPath(paths, flowId), { force: true });
 }
 
 export function tamperedFlows(paths: ProjectPaths, flows: Flow[]): Flow[] {

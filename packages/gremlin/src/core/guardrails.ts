@@ -13,8 +13,8 @@ export class GuardrailError extends Error {
   }
 }
 
-/** Paths no fixer may ever change: the tests themselves and Gremlin's own config. */
-export const ALWAYS_PROTECTED = ['.gremlin/flows/**', '.gremlin/lock.json', 'gremlin.config.yaml'];
+/** Paths no fixer may ever change: the tests themselves, their locks (lock.json is the older single-file lock) and Gremlin's own config. */
+export const ALWAYS_PROTECTED = ['.gremlin/flows/**', '.gremlin/locks/**', '.gremlin/lock.json', 'gremlin.config.yaml'];
 
 const LOCAL_HOST = /^(localhost|127\.\d+\.\d+\.\d+|0\.0\.0\.0|\[::1\]|.*\.localhost|.*\.local|.*\.test)$/i;
 const PREVIEW_HOST = /(preview|staging|stage|dev|test|qa|sandbox|uat|vercel\.app|netlify\.app|pages\.dev|ngrok|onrender\.com|fly\.dev|railway\.app)/i;

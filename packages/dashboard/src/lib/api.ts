@@ -178,6 +178,8 @@ export interface Bug {
   regressedAt?: string
   /** Several agents competed to fix this bug and Kane judged them. */
   arena?: { at: string; entries: ArenaEntry[]; winner?: string }
+  /** The pull request with the fix; Guard waits for it to merge before calling a failure a regression. */
+  pr?: { url: string; branch: string; sha: string }
   credits: number
 }
 

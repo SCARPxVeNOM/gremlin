@@ -10,11 +10,11 @@ import { runBreaker } from './core/breaker.ts';
 import { commentOnIssue, readGithubIssue, runCapture, type BugReportInput } from './core/capture.ts';
 import { loadProject, type Project } from './core/config.ts';
 import { runFixer, verifyBug } from './core/fixer.ts';
-import { getFlow, lintFlow, listFlows, saveFlow, updateFlowMeta, type FlowType } from './core/flow.ts';
-import { guardBrief, guardMarkdown, runGuard } from './core/guard.ts';
+import { getFlow, lintContract, lintFlow, listFlows, saveFlow, updateFlowMeta, type FlowType } from './core/flow.ts';
+import { guardBrief, guardMarkdown, runGuard, unmergedFix } from './core/guard.ts';
 import { GuardrailError } from './core/guardrails.ts';
 import { installCi, installClaudeHooks, installIssueCi, installMcp, installRules } from './core/integrations.ts';
-import { openBugPr, pendingIssues, runIssueLoop, type IssueLoopResult } from './core/issues.ts';
+import { openBugPr, pendingIssues, pullMergedFixes, runIssueLoop, type IssueLoopResult } from './core/issues.ts';
 import { defaultContenders, runArena } from './core/arena.ts';
 import { kaneStatus } from './core/kane.ts';
 import { describeRun, runFlow } from './core/runner.ts';
@@ -89,7 +89,11 @@ program
       line(flows.length > 0, `${flows.length} flows (${flows.filter((f) => f.status === 'active').length} active)`, 'gremlin init or gremlin flows new');
       if (pr.config.contracts.length) {
         console.log(`${g.ok('✓')} ${pr.config.contracts.length} behaviour contract${pr.config.contracts.length === 1 ? '' : 's'}, checked by Kane at the end of every flow they apply to`);
-        for (const c of pr.config.contracts) console.log(g.dim(`  · ${c.rule}${c.tags.length ? ` (${c.tags.join(', ')})` : ''}`));
+        for (const c of pr.config.contracts) {
+          console.log(g.dim(`  · ${c.rule}${c.tags.length ? ` (${c.tags.join(', ')})` : ''}`));
+          // Kane applies a rule literally, on whatever page a flow ends on: flag wording likely to fail where it doesn't apply
+          for (const i of lintContract(c.rule)) console.log(`    ${g.warn('!')} ${i.message}${g.dim(`  → ${i.hint}`)}`);
+        }
       }
       for (const f of flows) for (const i of lintFlow(f)) console.log(`  ${i.level === 'error' ? g.bad('!') : g.warn('·')} ${f.id}: ${i.message}`);
     }),
@@ -338,6 +342,18 @@ program
       const pr = project();
       const url = openBugPr(pr, bugId.toUpperCase());
       console.log(`${g.ok('✓')} Pull request: ${url}`);
+      console.log(g.dim("Once it's merged, `gremlin pull` brings it in (a plain git pull trips over Gremlin's records)."));
+    }),
+  );
+
+program
+  .command('pull')
+  .description("git pull, after a Gremlin pull request merges: Gremlin's copies of the records it brings in make way")
+  .action(() =>
+    main(async () => {
+      const { upstream, dropped, kept } = pullMergedFixes(project());
+      console.log(`${g.ok('✓')} Pulled ${upstream}${dropped.length ? `; ${dropped.length} of Gremlin's records came in with it` : ''}`);
+      if (kept.length) console.log(g.dim(`Kept this checkout's own changes to ${kept.join(', ')}`));
     }),
   );
 
@@ -386,7 +402,7 @@ program
               blocking: report.blocking,
               reason: report.reason,
               credits: report.credits,
-              results: report.results.map((r) => ({ flow: r.flow.id, status: r.status, run: r.run?.id, bug: r.bug?.id, regression: r.regression, reason: r.run?.kane?.reason })),
+              results: report.results.map((r) => ({ flow: r.flow.id, status: r.status, run: r.run?.id, bug: r.bug?.id, regression: r.regression, reason: r.run?.kane?.reason, pr: r.status === 'unmerged' ? r.bug?.pr?.url : undefined })),
             },
             null,
             2,
@@ -396,6 +412,7 @@ program
         console.log(guardBrief(pr, report));
       } else {
         console.log(`\n${report.blocking ? g.bad('✗ Blocked') : g.ok('✓ Clear')}  ${report.results.length} flows · ${report.reason} · ${report.credits} credits`);
+        for (const r of report.results) if (r.status === 'unmerged') console.log(g.warn(`⏳ ${r.flow.title}: not blocking, ${unmergedFix(r.bug!)}`));
         if (report.blocking) console.log(g.dim('Run `gremlin guard --brief` for the evidence an agent needs, or `gremlin fix <BUG>`.'));
       }
       process.exitCode = report.blocking ? 1 : 0;

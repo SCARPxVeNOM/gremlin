@@ -93,7 +93,7 @@ export async function sessionStart(): Promise<void> {
 
 const WRITE_TOOLS = new Set(['Edit', 'Write', 'MultiEdit', 'NotebookEdit']);
 const DESTRUCTIVE = /(\brm\b|\bmv\b|\bcp\b|sed\s+-i|perl\s+-[a-z]*i|>\s*\S|\btee\b|\btruncate\b|\bunlink\b|writeFile|open\([^)]*['"]w)/;
-const GUARDED_IN_SHELL = /\.gremlin\/(flows|lock\.json)|gremlin\.config\.yaml/;
+const GUARDED_IN_SHELL = /\.gremlin\/(flows|locks?\b)|gremlin\.config\.yaml/; // locks/ and the older lock.json
 
 export async function preToolUse(): Promise<void> {
   const input = await readStdin();
@@ -172,7 +172,9 @@ export async function stop(): Promise<void> {
     s.attempts = 0;
     s.escalated = false;
     writeState(project.paths, state);
-    out({ systemMessage: `👹 Gremlin: ${report.results.length} flow${report.results.length === 1 ? '' : 's'} verified by Kane CLI in a real browser ✓ (${report.credits} credits)` });
+    const waiting = report.results.filter((r) => r.status === 'unmerged').length; // failed, but only because a fix's PR isn't merged
+    const verified = report.results.length - waiting;
+    out({ systemMessage: `👹 Gremlin: ${verified} flow${verified === 1 ? '' : 's'} verified by Kane CLI in a real browser ✓ (${report.credits} credits)${waiting ? `; ${waiting} wait${waiting === 1 ? 's' : ''} on a fix that isn't merged yet` : ''}` });
     return;
   }
 

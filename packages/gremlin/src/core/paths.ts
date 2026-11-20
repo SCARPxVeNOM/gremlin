@@ -25,7 +25,10 @@ export interface ProjectPaths {
   evidence: string;
   events: string;
   ledger: string;
-  lock: string;
+  /** One lock file per approved flow: locks/<type>/<stem>.json, so pull requests that lock different flows never conflict. */
+  locks: string;
+  /** The single lock file older versions kept; read until the first lock change migrates it into locks/. */
+  legacyLock: string;
   stats: string;
   state: string;
   reports: string;
@@ -44,7 +47,8 @@ export function projectPaths(root: string): ProjectPaths {
     evidence: join(dir, 'evidence'),
     events: join(dir, 'events.jsonl'),
     ledger: join(dir, 'ledger.jsonl'),
-    lock: join(dir, 'lock.json'),
+    locks: join(dir, 'locks'),
+    legacyLock: join(dir, 'lock.json'),
     stats: join(dir, 'stats.json'),
     state: join(dir, 'state.json'),
     reports: join(dir, 'reports'),

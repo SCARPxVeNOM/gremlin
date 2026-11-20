@@ -140,7 +140,7 @@ export async function runFixer(project: Project, bugId: string, opts: FixOptions
       attempt.agentSummary = res.summary.slice(0, 1200);
 
       // What did the agent actually change? Put back anything it may not touch.
-      const changed = changedSince(snap).filter((f) => !f.startsWith('.gremlin/') || f.startsWith('.gremlin/flows/') || f === '.gremlin/lock.json');
+      const changed = changedSince(snap).filter((f) => !f.startsWith('.gremlin/') || f.startsWith('.gremlin/flows/') || f.startsWith('.gremlin/locks/') || f === '.gremlin/lock.json');
       const tampered = changed.filter(isGuarded);
       if (tampered.length) {
         restoreGuarded(snap, tampered);

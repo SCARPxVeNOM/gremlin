@@ -154,7 +154,8 @@ jobs:
 function appInstallCommand(root: string): string {
   const lock = existsSync(join(root, 'package-lock.json'));
   const pnpm = existsSync(join(root, 'pnpm-lock.yaml'));
-  return pnpm ? 'corepack enable && pnpm install --frozen-lockfile' : lock ? 'npm ci' : existsSync(join(root, 'package.json')) ? 'npm install' : 'true';
+  // without a committed lockfile, npm install would write one, and the issue autopilot refuses to open a PR from a dirty tree
+  return pnpm ? 'corepack enable && pnpm install --frozen-lockfile' : lock ? 'npm ci' : existsSync(join(root, 'package.json')) ? 'npm install --no-package-lock' : 'true';
 }
 
 export function installCi(root: string, opts: { start?: string; url: string }): Installed {

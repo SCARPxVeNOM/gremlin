@@ -78,7 +78,7 @@ function run(id: string, status: RunRecord['status'], shots: string[], failure?:
 
 test('a proven fix is committed on a branch and opened as a pull request with Kane’s before and after', async () => {
   const { saveFlow } = await import('../src/core/flow.ts');
-  const { saveBug, saveRun } = await import('../src/core/store.ts');
+  const { getBug, saveBug, saveRun } = await import('../src/core/store.ts');
   const { openFixPr } = await import('../src/core/issues.ts');
   const p = shopRepo();
 
@@ -146,6 +146,11 @@ test('a proven fix is committed on a branch and opened as a pull request with Ka
   const create = ghCalls().find((c) => c.args[0] === 'pr' && c.args[1] === 'create')!;
   assert.deepEqual(create.args.slice(0, 6), ['pr', 'create', '--base', 'main', '--head', branch]);
   const sha = git(p.root, 'rev-parse', `origin/${branch}`);
+
+  // the pull request is noted on the record left in this checkout, so Guard here knows the fix isn't merged yet;
+  // the record that merges can't name its own commit, and doesn't need to
+  assert.deepEqual(getBug(p.paths, 'BUG-001')!.pr, { url, branch, sha });
+  assert.equal(JSON.parse(git(p.root, 'show', `origin/${branch}:.gremlin/bugs/BUG-001.json`)).pr, undefined);
   assert.ok(create.stdin.includes(`https://github.com/acme/shop/blob/${sha}/.gremlin/bugs/BUG-001/kane-before.jpg?raw=true`));
   assert.match(create.stdin, /🔴 Before .*Failed at “Type welcome10 and click "Apply"”: The coupon was rejected/);
   assert.match(create.stdin, /🟢 After .*Passed on attempt 1 of 1/);

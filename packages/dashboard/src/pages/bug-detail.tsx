@@ -36,6 +36,7 @@ function LoopStepper({ bug, runs }: { bug: Bug; runs: Run[] }) {
   const proven = bug.status === 'fixed'
   const escalated = bug.status === 'escalated'
   const regressed = Boolean(bug.regressedAt) && !proven && !fixing
+  const rejected = bug.status === 'rejected'
   const stages = [
     { label: ORIGIN[bug.origin], detail: timeAgo(bug.createdAt), state: 'done' },
     {
@@ -45,13 +46,13 @@ function LoopStepper({ bug, runs }: { bug: Bug; runs: Run[] }) {
     },
     {
       label: 'Agent fix',
-      detail: tried ? `${bug.attempts.length} attempt${bug.attempts.length === 1 ? '' : 's'}` : 'not started',
+      detail: tried ? `${bug.attempts.length} attempt${bug.attempts.length === 1 ? '' : 's'}` : rejected ? 'not needed' : 'not started',
       state: fixing ? 'active' : tried ? (escalated ? 'bad' : 'done') : 'todo',
     },
     {
-      label: proven ? 'Proven by Kane' : escalated ? 'Escalated to a human' : regressed ? 'Regressed' : 'Kane re-run',
-      detail: proven ? timeAgo(bug.fixedAt) : escalated ? 'out of attempts' : regressed ? `Guard caught it coming back ${timeAgo(bug.regressedAt)}` : 'pending',
-      state: proven ? 'done' : escalated || regressed ? 'bad' : 'todo',
+      label: proven ? 'Proven by Kane' : escalated ? 'Escalated to a human' : regressed ? 'Regressed' : rejected ? 'Closed: not a bug' : 'Kane re-run',
+      detail: proven ? timeAgo(bug.fixedAt) : escalated ? 'out of attempts' : regressed ? `Guard caught it coming back ${timeAgo(bug.regressedAt)}` : rejected ? 'a human rejected it' : 'pending',
+      state: proven || rejected ? 'done' : escalated || regressed ? 'bad' : 'todo',
     },
   ]
   return (
@@ -186,7 +187,7 @@ function ArenaCard({ entries }: { entries: ArenaEntry[] }) {
                 </TableCell>
                 <TableCell className="text-muted-foreground text-right tabular-nums">{e.durationS !== undefined ? duration(e.durationS) : '–'}</TableCell>
                 <TableCell className="text-right font-mono text-xs tabular-nums">{e.changedFiles.length ? `+${e.added} −${e.removed}` : '–'}</TableCell>
-                <TableCell>
+                <TableCell className="whitespace-normal">
                   {e.runId ? (
                     <Link to={`/runs/${e.runId}`} className={cn('underline-offset-4 hover:underline', e.result === 'won' || e.result === 'passed' ? 'text-good' : e.result === 'flaky' ? 'text-serious' : 'text-critical')}>
                       {ARENA_RESULT[e.result]}
@@ -194,7 +195,11 @@ function ArenaCard({ entries }: { entries: ArenaEntry[] }) {
                   ) : (
                     <span className="text-muted-foreground">{ARENA_RESULT[e.result]}</span>
                   )}
-                  {e.note && <div className="text-muted-foreground mt-0.5 max-w-80 truncate text-xs">{e.note}</div>}
+                  {e.note && (
+                    <div className="text-muted-foreground mt-0.5 line-clamp-2 text-xs" title={e.note}>
+                      {e.note}
+                    </div>
+                  )}
                 </TableCell>
               </TableRow>
             ))}
