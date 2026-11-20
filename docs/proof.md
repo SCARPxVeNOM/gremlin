@@ -205,7 +205,7 @@ and BUG-004 are still open (status `candidate`). The regression Kane caught is
 `RUN-20261118-172106-e2064a`; the replay that passed after Claude Code restored the fix is
 `RUN-20261118-173221-01dddd`.
 
-To browse it: build Gremlin (see the [Quickstart](../README.md#quickstart)), then `cd docs/demo-run && gremlin dash`.
+To browse it: `npm install -g gremlin-qa` (see the [Quickstart](../README.md#quickstart)), then `cd docs/demo-run && gremlin dash`.
 It is a record, not a working project: the shop's code isn't in it.
 
 ## Unit tests

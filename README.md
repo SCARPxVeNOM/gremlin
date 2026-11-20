@@ -10,6 +10,7 @@
 </p>
 
 <p align="center">
+  <a href="https://www.npmjs.com/package/gremlin-qa"><img src="https://img.shields.io/npm/v/gremlin-qa" alt="gremlin-qa on npm"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue" alt="MIT license"></a>
   <img src="https://img.shields.io/badge/node-%3E%3D20-339933" alt="Node 20 or later">
   <a href="https://github.com/SCARPxVeNOM/kiln-shop/pull/6"><img src="https://img.shields.io/badge/live%20run-issue%20%E2%86%92%20Kane--proven%20PR-6f42c1" alt="Live run: a GitHub issue became a pull request Kane proved"></a>
@@ -182,7 +183,7 @@ your own TestMu AI account, and the coding agent on your own login.
 
 1. **Read the evidence, no setup.** [`docs/proof.md`](docs/proof.md) links every claim to a public issue, Actions run,
    pull request or committed record, and has a 2-minute checklist.
-2. **Browse the recorded session, no Kane runs.** After the [Quickstart](#quickstart) build:
+2. **Browse the recorded session, no Kane runs.** With `npm install -g gremlin-qa` and this repo cloned,
    `cd docs/demo-run && gremlin dash` opens all 43 runs, the bugs, Claude Code's fix packages and Kane's screenshots.
 3. **Run Kane, no coding agent.** In [`examples/kiln`](examples/kiln), `gremlin doctor` then `gremlin run --all`
    replays the shop's 3 happy flows from the Kane recordings committed with it. Gremlin starts the shop itself.
@@ -204,16 +205,17 @@ You need Node 20+, Chrome, and [Kane CLI](https://www.npmjs.com/package/@testmua
 
 ```bash
 npm install -g @testmuai/kane-cli && kane-cli login
-
-git clone https://github.com/SCARPxVeNOM/gremlin.git
-cd gremlin && npm install && npm run build
-cd packages/gremlin && npm link          # puts `gremlin` on your PATH
+npm install -g gremlin-qa                # puts `gremlin` on your PATH
 
 cd ~/your-app
 gremlin init                             # 4 questions, then drafts and runs your first flows
 gremlin break                            # hunt for bugs
 gremlin dash                             # watch it all at http://127.0.0.1:4777
 ```
+
+The demo shop and the recorded session live in this repo, so clone it to try them:
+`git clone https://github.com/SCARPxVeNOM/gremlin.git`. To run Gremlin from source instead, run
+`npm install && npm run build` there, then `npm link` in `packages/gremlin`.
 
 `gremlin init` detects your stack, asks for the URL, platforms, a test persona and your coding agent, writes
 `gremlin.config.yaml`, has your agent draft happy-path flows, installs the hooks, MCP server and rules for that
