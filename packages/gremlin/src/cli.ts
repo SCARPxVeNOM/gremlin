@@ -24,7 +24,7 @@ import { ensureApp, foreignListener, isReachable } from './core/target.ts';
 import { startJob, endJob } from './core/jobs.ts';
 import { banner, bugLine, consoleReporter, g, runMark, sevColor, statusColor, table } from './ui.ts';
 
-const VERSION = '0.1.0';
+const VERSION = '0.1.1';
 const program = new Command();
 
 program

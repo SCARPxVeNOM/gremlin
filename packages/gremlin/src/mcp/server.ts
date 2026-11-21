@@ -28,7 +28,7 @@ function project(): Project {
 }
 
 export async function startMcp(): Promise<void> {
-  const server = new McpServer({ name: 'gremlin', version: '0.1.0' });
+  const server = new McpServer({ name: 'gremlin', version: '0.1.1' });
 
   server.registerTool(
     'gremlin_status',
