@@ -124,6 +124,20 @@ test("a fix waiting in an open pull request is not a regression on main, until i
   assert.equal(git(p.root, 'rev-parse', '--abbrev-ref', 'HEAD'), 'main');
   assert.match(readFileSync(join(p.root, 'server.js'), 'utf8'), /coupons\[code\]/, 'main does not have the fix');
 
+  // nor does the Fixer hold it against the next fix made on main: it isn't one of that fix's related flows
+  const { relatedFlows } = await import('../src/core/fixer.ts');
+  const next = saveFlow(p.paths, {
+    title: 'A second coupon code is accepted',
+    type: 'adversarial',
+    start: '/',
+    source: 'breaker',
+    status: 'draft',
+    tags: ['checkout'],
+    steps: ['Type kiln20 into the "Coupon code" field and click "Apply"'],
+    expect: ['A message says the 20% discount was applied'],
+  });
+  assert.deepEqual(relatedFlows(p, next).map((f) => f.id), [], "BUG-001's flow waits for its pull request");
+
   // so on main, Kane fails the regression flow: that's the fix not being merged, not the bug coming back
   process.env.FAKE_KANE_FAIL = 'Check the expected outcome';
   const before = listening();
@@ -153,6 +167,8 @@ test("a fix waiting in an open pull request is not a regression on main, until i
   git(p.root, 'merge', '-q', '--no-ff', '-m', 'Merge pull request #43', 'gremlin/bug-001');
   writeFileSync(join(p.paths.bugs, 'BUG-001.json'), local);
   assert.equal(getBug(p.paths, 'BUG-001')!.pr?.url, url);
+
+  assert.deepEqual(relatedFlows(p, next).map((f) => f.id), [flow.id], 'merged, it guards every later fix again');
 
   // from here on a failure is what it always was: the bug is back
   const after = await runGuard(p, { flowIds: [flow.id] });

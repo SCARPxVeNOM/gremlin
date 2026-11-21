@@ -9,7 +9,7 @@ import { protectedMatcher } from './guardrails.ts';
 import { endJob, startJob, type Job } from './jobs.ts';
 import { ensureDir, type ProjectPaths } from './paths.ts';
 import { describeRun, runFlow, silentReporter, type Reporter } from './runner.ts';
-import { changedSince, diffStat, restoreGuarded, revertFiles, takeSnapshot } from './snapshot.ts';
+import { changedSince, diffStat, inHistory, restoreGuarded, revertFiles, takeSnapshot } from './snapshot.ts';
 import { emit, getBug, getRun, lockFlow, saveBug, unlockFlow, type BugRecord, type FixAttempt, type RunRecord } from './store.ts';
 import { onInterrupt } from './interrupt.ts';
 import { ensureApp, restartApp } from './target.ts';
@@ -42,6 +42,10 @@ export function lastFailingRun(project: Project, bug: BugRecord): RunRecord | un
   }
   return bug.runs.length ? getRun(project.paths, bug.runs[bug.runs.length - 1]) : undefined;
 }
+
+/** The agent couldn't work at all (a usage or rate limit, a sign-in), so nothing was attempted. */
+export const agentUnavailable = (error: string) =>
+  /\b(session|usage|rate|daily|weekly) limit\b|\bquota\b|credit balance is too low|not logged in|please run \/login|invalid api key|overloaded/i.test(error);
 
 export async function runFixer(project: Project, bugId: string, opts: FixOptions = {}): Promise<FixResult> {
   const reporter = opts.reporter ?? silentReporter;
@@ -97,9 +101,12 @@ export async function runFixer(project: Project, bugId: string, opts: FixOptions
   const areaGlobs = flow.tags.flatMap((t) => config.guard.areas[t] ?? []);
   const inArea = areaGlobs.length ? picomatch(areaGlobs, { dot: true }) : () => true;
 
-  // an attempt left pending by an earlier run that was stopped never finished: it doesn't count
-  bug.attempts = bug.attempts.filter((a) => a.result !== 'pending');
-  const statusBefore = bug.status === 'fixing' ? 'confirmed' : bug.status;
+  // an attempt left pending by an earlier run that was stopped never finished, and one the agent couldn't start
+  // never happened: neither counts
+  const lost = (a: FixAttempt) => a.result === 'pending' || (a.result === 'agent-error' && !a.changedFiles.length && agentUnavailable(a.agentSummary ?? ''));
+  const hadLost = bug.attempts.some(lost);
+  bug.attempts = bug.attempts.filter((a) => !lost(a));
+  const statusBefore = bug.status === 'fixing' || (bug.status === 'escalated' && hadLost && bug.attempts.length < maxAttempts) ? 'confirmed' : bug.status;
   const releaseBug = onInterrupt(() => {
     bug.attempts = bug.attempts.filter((a) => a.result !== 'pending');
     bug.status = statusBefore;
@@ -153,9 +160,19 @@ export async function runFixer(project: Project, bugId: string, opts: FixOptions
       if (attempt.outsideArea.length) emit(paths, 'warn', `Changes outside the bug's area, flagged for review: ${attempt.outsideArea.join(', ')}`, { bugId: bug.id }, job.id);
 
       if (!res.ok && !attempt.changedFiles.length) {
+        reporter.warn(`   agent error: ${res.summary.slice(0, 200)}`);
+        if (agentUnavailable(res.summary)) {
+          // nothing was attempted: spend no attempt, page nobody, leave the bug as it was
+          bug.attempts.pop();
+          bug.status = statusBefore;
+          saveBug(paths, bug);
+          const message = `${agent.label} couldn't start, so ${bug.id} is unchanged and no attempt was spent. Run \`gremlin fix ${bug.id}\` again once it can.`;
+          emit(paths, 'warn', message, { bugId: bug.id }, job.id);
+          endJob(paths, job, 'error', message, { bugId: bug.id });
+          return { job, bug, outcome: 'error', message };
+        }
         attempt.result = 'agent-error';
         saveBug(paths, bug);
-        reporter.warn(`   agent error: ${res.summary.slice(0, 200)}`);
         continue;
       }
       if (!attempt.changedFiles.length) {
@@ -293,7 +310,13 @@ export function acceptFix(project: Project, bug: BugRecord, flow: Flow, related:
 
 /** Other repros of the same bug come first (they must pass too), then active flows in the same area. */
 export function relatedFlows(project: Project, flow: Flow, limit = 4, bugId?: string): Flow[] {
-  const all = listFlows(project.paths).filter((f) => f.id !== flow.id && f.status !== 'retired');
+  // a flow whose own fix waits on a pull request this code doesn't have fails here whatever the fix under test does,
+  // so it would send a good fix back to the agent (Guard calls the same failure "unmerged", not a regression)
+  const waiting = (f: Flow) => {
+    const b = f.bug ? getBug(project.paths, f.bug) : undefined;
+    return Boolean(b?.status === 'fixed' && b.pr && !inHistory(project.root, b.pr.sha));
+  };
+  const all = listFlows(project.paths).filter((f) => f.id !== flow.id && f.status !== 'retired' && !waiting(f));
   const siblings = bugId ? all.filter((f) => f.bug === bugId) : [];
   const area = all
     .filter((f) => !siblings.includes(f) && f.status === 'active' && f.tags.some((t) => flow.tags.includes(t)))

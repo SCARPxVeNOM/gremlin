@@ -116,11 +116,13 @@ on branches named `gremlin/bug-NNN-issue-N`. Gremlin never pushes to the default
    `guard.areas` are flagged for review.
 7. **Verify.** `restartApp` in [`target.ts`](../packages/gremlin/src/core/target.ts) restarts an app Gremlin started,
    so Kane tests the new code. If it won't start, its stderr becomes that attempt's evidence. Kane re-runs the flow,
-   then up to four related flows: other repros of the same bug first, then active flows with the same tags.
+   then up to four related flows: other repros of the same bug first, then active flows with the same tags. A flow
+   whose own fix is still in an unmerged pull request is skipped, because it fails on this code whatever the fix does.
 8. **Locked, or round again.** If everything passes, `acceptFix` moves the flow to `regression/`, marks it active and
    locks it, and Guard replays it from then on. The issue autopilot then opens a pull request with the fix, the locked
    flow and Kane's before and after. If anything fails, Kane's new evidence goes into the next fix package. After
    `loop.attempts` tries (3 by default) the bug is escalated to a human, with `escalation.md` listing every attempt.
+   An agent that couldn't start (a usage limit, a sign-in) spends no attempt: the bug stays as it was.
 
 The Breaker uses the same machinery with a different start: its attacks are flows that Kane runs, Kane's triage decides
 which failures are bugs, and a bug it files goes through the same Fixer.

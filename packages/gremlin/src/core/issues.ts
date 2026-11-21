@@ -1,6 +1,6 @@
 import { spawnSync } from 'node:child_process';
-import { copyFileSync, existsSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
-import { dirname, extname, join, relative } from 'node:path';
+import { copyFileSync, existsSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import { basename, dirname, extname, join, relative } from 'node:path';
 import { CONNECTORS } from './agent.ts';
 import { arenaMarkdown, runArena, type ArenaResult } from './arena.ts';
 import { CONFIRM_LABEL, commentOnIssue, originRepo, reproFromComment, runCapture, runGh, type CaptureResult, type DraftedRepro } from './capture.ts';
@@ -12,7 +12,7 @@ import { ensureDir } from './paths.ts';
 import { redactText } from './redact.ts';
 import { silentReporter, type Reporter } from './runner.ts';
 import { uncommittedChanges } from './snapshot.ts';
-import { emit, getBug, getRun, lockPath, reserveOpenFixBranches, saveBug, type BugRecord, type RunRecord } from './store.ts';
+import { emit, getBug, getRun, lockPath, reserveOpenFixBranches, saveBug, type BugRecord, type FixAttempt, type RunRecord } from './store.ts';
 import { truncate } from './util.ts';
 
 /**
@@ -248,8 +248,20 @@ export async function runIssueLoop(project: Project, n: number, opts: IssueLoopO
 }
 
 function lastPassingRun(project: Project, bug: BugRecord): RunRecord | undefined {
+  return provenFix(project, bug).run;
+}
+
+/**
+ * The fix Kane last watched pass. The Fixer leaves a failed attempt's changes for the next attempt to build on, so
+ * a fix is every attempt's files. A `gremlin verify` that passed after the last passing attempt proved whatever the
+ * working tree held then (a fix made or trimmed by hand): its files are what's uncommitted.
+ */
+function provenFix(project: Project, bug: BugRecord): { run?: RunRecord; attempt?: FixAttempt; files?: string[] } {
   const attempt = [...bug.attempts].reverse().find((a) => a.result === 'passed');
-  return attempt?.runId ? getRun(project.paths, attempt.runId) : undefined;
+  const run = attempt?.runId ? getRun(project.paths, attempt.runId) : undefined;
+  const verified = [...bug.runs].reverse().map((id) => getRun(project.paths, id)).find((r) => r?.purpose === 'verify' && r.status === 'passed');
+  if (verified && (!run || verified.startedAt > run.startedAt)) return { run: verified, attempt };
+  return { run, attempt, files: [...new Set(bug.attempts.flatMap((a) => a.changedFiles))] };
 }
 
 function relatedCount(bug: BugRecord): number {
@@ -293,6 +305,7 @@ export function openFixPr(project: Project, issue: Pick<GhIssue, 'number' | 'tit
   let opened: NonNullable<BugRecord['pr']>;
   try {
     mustGit(root, ['add', '-A', '--', '.']);
+    const files = mustGit(root, ['diff', '--cached', '--name-only', '--relative', '--', '.', ':(exclude).gremlin']).split('\n').filter(Boolean);
     const who = git(root, ['config', 'user.email']).out ? [] : ['-c', 'user.name=Gremlin', '-c', 'user.email=gremlin@users.noreply.github.com'];
     mustGit(root, [...who, 'commit', '-m', title, '-m', `Reproduced and verified by Kane CLI through Gremlin (${bug.id}).${issue ? `\n\nFixes #${issue.number}` : ''}`]);
     committed = true;
@@ -301,7 +314,7 @@ export function openFixPr(project: Project, issue: Pick<GhIssue, 'number' | 'tit
 
     const imageUrl = (file?: string) => (file ? `https://github.com/${nameWithOwner}/blob/${sha}/${prefix}${relative(root, file).split('\\').join('/')}?raw=true` : undefined);
     const stacked = base !== defaultBranch ? `> Stacked on \`${base}\`, which isn't merged yet, so this diff shows only this fix. Merge that one first.\n\n` : '';
-    const body = stacked + prBody(project, issue, bug, failFirst, { before: imageUrl(shots.before), after: imageUrl(shots.after) });
+    const body = stacked + prBody(project, issue, bug, failFirst, { before: imageUrl(shots.before), after: imageUrl(shots.after) }, files);
     const pr = gh(['pr', 'create', '--base', base, '--head', branch, '--title', title, '--body-file', '-'], root, body);
     let url = pr.out.split('\n').filter(Boolean).at(-1)!;
     if (!pr.ok) {
@@ -329,19 +342,27 @@ export function openFixPr(project: Project, issue: Pick<GhIssue, 'number' | 'tit
 
 /**
  * `gremlin pr <bug>`: open the pull request for a bug the Fixer or the arena has fixed, with the fix still in
- * the working tree. Only the fix goes in: other uncommitted work stops it.
+ * the working tree. Only the fix goes in: other uncommitted work stops it. After `gremlin verify` the fix is what
+ * Kane verified, so everything uncommitted goes in, unless a file changed after Kane looked.
  */
 export function openBugPr(project: Project, bugId: string): string {
   const bug = getBug(project.paths, bugId);
   if (!bug) throw new Error(`No bug ${bugId}`);
   if (bug.status !== 'fixed') throw new Error(`${bug.id} is ${bug.status}, not fixed: run \`gremlin fix ${bug.id}\` or \`gremlin arena ${bug.id}\` first.`);
-  const passing = [...bug.attempts].reverse().find((a) => a.result === 'passed');
+  const proven = provenFix(project, bug);
   const prefix = mustGit(project.root, ['rev-parse', '--show-prefix']);
-  const fix = new Set((passing?.changedFiles ?? []).map((f) => prefix + f));
   const changed = uncommittedChanges(project.root);
-  if (!changed.some((f) => fix.has(f))) throw new Error(`${bug.id}'s fix (${[...fix].join(', ') || 'no files'}) isn't in the working tree any more, so there is nothing to open a pull request for.`);
-  const other = changed.filter((f) => !fix.has(f));
-  if (other.length) throw new Error(`Other uncommitted changes would ride along with the fix: ${other.join(', ')}. Commit or stash them first.`);
+  if (!proven.files) {
+    if (!changed.length) throw new Error(`Kane verified ${bug.id}'s fix, but it isn't in the working tree any more, so there is nothing to open a pull request for.`);
+    const since = Date.parse(proven.run!.startedAt);
+    const touched = changed.filter((f) => existsSync(join(project.root, f.slice(prefix.length))) && statSync(join(project.root, f.slice(prefix.length))).mtimeMs > since);
+    if (touched.length) throw new Error(`${touched.join(', ')} changed after Kane verified ${bug.id}. Run \`gremlin verify ${bug.id}\` again, so the pull request holds only code Kane has seen.`);
+  } else {
+    const fix = new Set(proven.files.map((f) => prefix + f));
+    if (!changed.some((f) => fix.has(f))) throw new Error(`${bug.id}'s fix (${[...fix].join(', ') || 'no files'}) isn't in the working tree any more, so there is nothing to open a pull request for.`);
+    const other = changed.filter((f) => !fix.has(f));
+    if (other.length) throw new Error(`Other uncommitted changes would ride along with the fix: ${other.join(', ')}. Commit or stash them first.`);
+  }
   const failFirst = bug.runs.map((id) => getRun(project.paths, id)).find((r) => r?.status === 'failed');
   const issue = bug.report?.source === 'github' && bug.report.ref && bug.report.url ? { number: Number(bug.report.ref.replace('#', '')), title: bug.title, url: bug.report.url } : undefined;
   return openFixPr(project, issue, bug, failFirst);
@@ -412,11 +433,14 @@ export function prBody(
   bug: BugRecord,
   failFirst: RunRecord | undefined,
   images: { before?: string; after?: string } = {},
+  files?: string[],
 ): string {
-  const passing = [...bug.attempts].reverse().find((a) => a.result === 'passed');
+  const proven = provenFix(project, bug);
+  const byHand = !proven.files;
+  const passing = proven.attempt;
   // the Fixer records an agent by name ("claude-code"), the arena by label ("Claude Code (sonnet)")
   const agent = passing ? (CONNECTORS[passing.agent]?.label ?? passing.agent) : 'the coding agent';
-  const afterRun = passing?.runId ? getRun(project.paths, passing.runId) : undefined;
+  const afterRun = proven.run;
   const flow: Flow | undefined = getFlow(project.paths, bug.flowId);
   const tries = bug.attempts.filter((a) => a.result !== 'pending').length;
   const runLink = (run?: RunRecord) => {
@@ -428,7 +452,8 @@ export function prBody(
     ? `Gremlin reproduced [#${issue.number}](${issue.url})`
     : bug.origin === 'breaker'
       ? `Gremlin's Breaker found this by attacking the app like a hostile user, Kane confirmed it${bug.verdict?.confidence ? ` (${Math.round(bug.verdict.confidence * 100)}% sure it's a product bug)` : ''},`
-      : `Gremlin reproduced ${bug.report?.ref ? `the report ${bug.report.ref}` : 'the report'}`;
+      : // a report read from a file is named by its file name: the PR is public, the path is this machine's
+        `Gremlin reproduced ${bug.report?.ref ? `the report ${bug.report.source === 'file' ? `\`${basename(bug.report.ref)}\`` : bug.report.ref}` : 'the report'}`;
   const lines = [
     `### 👹 Fixes ${issue ? `#${issue.number}` : bug.id}: ${bug.title}`,
     '',
@@ -437,9 +462,9 @@ export function prBody(
     '| | Kane run | Verdict |',
     '| --- | --- | --- |',
     `| 🔴 Before | ${runLink(failFirst)} | Failed${k?.failedStep ? ` at “${k.failedStep.heading}”` : ''}${k?.reason ? `: ${truncate(k.reason, 200)}` : ''} |`,
-    `| 🟢 After | ${runLink(afterRun)} | Passed on attempt ${passing?.n ?? '?'} of ${tries} |`,
+    `| 🟢 After | ${runLink(afterRun)} | ${byHand ? 'Passed `gremlin verify` on the code in this pull request' : `Passed on attempt ${passing?.n ?? '?'} of ${tries}`} |`,
   ];
-  if (passing?.relatedRuns?.length) lines.push(`| Related flows | ${passing.relatedRuns.map((id) => `\`${id}\``).join(', ')} | All passed: no side effects |`);
+  if (!byHand && passing?.relatedRuns?.length) lines.push(`| Related flows | ${passing.relatedRuns.map((id) => `\`${id}\``).join(', ')} | All passed: no side effects |`);
   if (bug.confirmedBy) {
     lines.push(
       '',
@@ -464,8 +489,14 @@ export function prBody(
     flow.steps.forEach((s, i) => lines.push(`${i + 1}. ${s}`));
     lines.push('', ...flow.expect.map((e) => `- ${e}`));
   }
-  if (passing) {
-    lines.push('', `**What ${agent} changed:** ${passing.changedFiles.map((f) => `\`${f}\``).join(', ')}`);
+  const list = (fs: string[]) => fs.map((f) => `\`${f}\``).join(', ');
+  if (byHand) {
+    lines.push(
+      '',
+      `**What's in this pull request:** ${list(files ?? [])}. ${passing ? `A human changed ${agent}'s passing fix (attempt ${passing.n} of ${tries}) before opening it, so Kane verified this version again.` : 'Fixed by hand, then verified by Kane.'}`,
+    );
+  } else if (passing) {
+    lines.push('', `**What ${agent} changed:** ${list(files ?? passing.changedFiles)}`);
     if (passing.outsideArea.length) lines.push(`⚠️ Outside the bug's area, worth a closer look: ${passing.outsideArea.map((f) => `\`${f}\``).join(', ')}`);
     if (passing.agentSummary) lines.push('', '<details><summary>The agent’s explanation</summary>', '', redactText(truncate(passing.agentSummary, 1200)), '', '</details>');
   }

@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { ConfigSchema, type Project } from '../src/core/config.ts';
@@ -260,6 +260,84 @@ test('a bug the Breaker found becomes a pull request of its own, and only the fi
   const [view, created] = ghCalls().slice(-2);
   assert.deepEqual(view.args.slice(0, 3), ['repo', 'view', 'me/shop'], '`gh repo view` ignores GH_REPO, so the fork is named');
   assert.equal(created.repo, 'me/shop', 'the pull request is opened on the fork it was pushed to, never upstream');
+});
+
+test('a fix that passed on a later attempt goes in whole, and one trimmed by hand goes in as Kane verified it', async () => {
+  const { saveFlow } = await import('../src/core/flow.ts');
+  const { getBug, saveBug, saveRun } = await import('../src/core/store.ts');
+  const { openBugPr } = await import('../src/core/issues.ts');
+  const p = shopRepo();
+  writeFileSync(join(p.root, 'prices.js'), 'export const total = (a, b) => a + b;\n');
+  git(p.root, 'add', '-A');
+  git(p.root, 'commit', '-q', '-m', 'prices');
+  const flow = saveFlow(p.paths, {
+    title: 'A lowercase coupon code is accepted',
+    type: 'regression',
+    start: '/checkout',
+    source: 'capture:paste',
+    status: 'active',
+    tags: ['checkout'],
+    steps: ['Type welcome10 into the "Coupon code" field and click "Apply"'],
+    expect: ['A message says the 10% welcome discount was applied'],
+  });
+  const red = run('RUN-20261120-120000-aaaaaa', 'failed', ['step-1.jpg']);
+  const amber = run('RUN-20261120-120300-cccccc', 'failed', ['step-1.jpg']);
+  const green = run('RUN-20261120-120600-bbbbbb', 'passed', ['step-1.jpg']);
+  for (const r of [red, amber, green]) saveRun(p.paths, r);
+  // attempt 1 fixed the coupon but Kane failed it; attempt 2 built on it, so the fix is both attempts' files
+  const bug: BugRecord = {
+    id: 'BUG-001',
+    title: 'Lowercase coupon codes are rejected',
+    origin: 'capture',
+    status: 'fixed',
+    severity: 'high',
+    confidence: 0.9,
+    flowId: flow.id,
+    tags: ['checkout'],
+    runs: [red.id, amber.id, green.id],
+    attempts: [
+      { n: 1, at: '', agent: 'claude-code', promptFile: '', changedFiles: ['server.js'], outsideArea: [], blocked: [], runId: amber.id, result: 'failed' },
+      { n: 2, at: '', agent: 'claude-code', promptFile: '', changedFiles: ['prices.js'], outsideArea: [], blocked: [], runId: green.id, result: 'passed' },
+    ],
+    createdAt: '',
+    updatedAt: '',
+    credits: 30,
+  };
+  saveBug(p.paths, bug);
+  writeFileSync(join(p.root, 'server.js'), 'const coupon = coupons[String(code).toUpperCase()];\n');
+  writeFileSync(join(p.root, 'prices.js'), 'export const total = (a, b) => Math.max(a + b, 0);\n');
+
+  openBugPr(p, 'BUG-001');
+  let body = ghCalls().findLast((c) => c.args[0] === 'pr' && c.args[1] === 'create')!.stdin;
+  assert.match(body, /\| 🟢 After \| `RUN-20261120-120600-bbbbbb` \| Passed on attempt 2 of 2 \|/);
+  assert.match(body, /\*\*What Claude Code changed:\*\* `prices\.js`, `server\.js`/);
+  assert.match(git(p.root, 'show', '--name-only', '--format=', 'origin/gremlin/bug-001'), /prices\.js[\s\S]*server\.js/);
+
+  // a second bug: Claude Code's passing fix also rewrote prices.js; a human keeps only the server.js part
+  git(p.root, 'checkout', '-q', 'main');
+  const bug2: BugRecord = { ...bug, id: 'BUG-002', runs: [red.id, green.id], attempts: [{ ...bug.attempts[1], n: 1, changedFiles: ['server.js', 'prices.js'] }] };
+  saveBug(p.paths, bug2);
+  writeFileSync(join(p.root, 'server.js'), 'const coupon = coupons[code.toUpperCase()];\n');
+
+  // Kane verifies the trimmed fix, so that is what goes in, with that run as the proof
+  const verified = { ...run('RUN-20261120-121500-dddddd', 'passed', ['step-1.jpg']), purpose: 'verify' as const, startedAt: new Date(statSync(join(p.root, 'server.js')).mtimeMs + 1000).toISOString() };
+  saveRun(p.paths, verified);
+  saveBug(p.paths, { ...getBug(p.paths, 'BUG-002')!, runs: [red.id, green.id, verified.id] });
+  openBugPr(p, 'BUG-002');
+  body = ghCalls().findLast((c) => c.args[0] === 'pr' && c.args[1] === 'create')!.stdin;
+  assert.match(body, /\| 🟢 After \| `RUN-20261120-121500-dddddd` \| Passed `gremlin verify` on the code in this pull request \|/);
+  assert.match(body, /\*\*What's in this pull request:\*\* `server\.js`\. A human changed Claude Code's passing fix \(attempt 1 of 1\) before opening it, so Kane verified this version again\./);
+  assert.doesNotMatch(body, /prices\.js/);
+  assert.equal(git(p.root, 'show', '--name-only', '--format=', 'origin/gremlin/bug-002').split('\n').filter((f) => !f.startsWith('.gremlin/')).join(), 'server.js');
+
+  // and code Kane hasn't seen never goes in on that run's word
+  git(p.root, 'checkout', '-q', 'main');
+  saveBug(p.paths, { ...getBug(p.paths, 'BUG-002')!, pr: undefined });
+  writeFileSync(join(p.root, 'server.js'), 'const coupon = coupons[code.trim().toUpperCase()];\n');
+  const { utimesSync } = await import('node:fs');
+  const later = new Date(Date.parse(verified.startedAt) + 60_000);
+  utimesSync(join(p.root, 'server.js'), later, later);
+  assert.throws(() => openBugPr(p, 'BUG-002'), /server\.js changed after Kane verified BUG-002\. Run `gremlin verify BUG-002` again/);
 });
 
 test('the repo gh works on is read from origin', async () => {
