@@ -1,0 +1,58 @@
+{"type":"stream_start","cli_version":"0.10.6","surface":"testmd","pid":19950,"v":1,"ts":"2026-11-18T11:55:35.108Z"}
+{"type":"test_md_step_start","step_index":1,"heading":"Step 1: Type bowl into the search box and press Enter","ref":null,"v":1,"ts":"2026-11-18T11:55:39.502Z"}
+{"type":"run_start","objective":"Start on http://localhost:4000/. Type \"bowl\" into the search box and press Enter.","timestamp":1795002939,"environment":{"resolution":"1920x1080"},"v":1,"ts":"2026-11-18T11:55:39.611Z"}
+{"type":"step_event","index":0,"event":"replay_started","detail":"replaying 4 actions","recording_length":4,"v":1,"ts":"2026-11-18T11:55:39.612Z"}
+{"type":"step_start","index":1,"objective":"Step 1","v":1,"ts":"2026-11-18T11:55:39.612Z"}
+{"type":"step_event","index":1,"event":"screenshot","detail":"https://kaneai-playground.lambdatest.io/","v":1,"ts":"2026-11-18T11:55:39.726Z"}
+{"type":"step_event","index":1,"event":"action","detail":"Navigate to http://localhost:4000/","action_type":"navigate","success":true,"v":1,"ts":"2026-11-18T11:55:40.019Z"}
+{"type":"step_event","index":1,"event":"reasoning","detail":"Navigate to http://localhost:4000/","action_type":"navigate","v":1,"ts":"2026-11-18T11:55:40.019Z"}
+{"type":"step_end","index":1,"status":"passed","duration":0.4,"summary":"navigate: Navigate to http://localhost:4000/","ordinal":1,"id":"0-1","kind":"navigate","screenshot":"screenshot.jpg","action_id":"6c11836a-7c8d-46cd-9832-a3cf748b8c94","v":1,"ts":"2026-11-18T11:55:40.022Z"}
+{"type":"step_start","index":2,"objective":"Step 2","v":1,"ts":"2026-11-18T11:55:40.022Z"}
+{"type":"step_event","index":2,"event":"screenshot","detail":"http://localhost:4000/","v":1,"ts":"2026-11-18T11:55:40.122Z"}
+{"type":"step_event","index":2,"event":"action","detail":"Waiting for the search to run","action_type":"wait","success":true,"v":1,"ts":"2026-11-18T11:55:41.128Z"}
+{"type":"step_event","index":2,"event":"reasoning","detail":"Waiting for the search to run","action_type":"wait","v":1,"ts":"2026-11-18T11:55:41.129Z"}
+{"type":"step_end","index":2,"status":"passed","duration":1.1,"summary":"wait: Waiting for the search to run","ordinal":2,"id":"0-2","kind":"wait","screenshot":"screenshot.jpg","action_id":"c34db95c-2402-4a78-9b08-2eca5fd6114b","v":1,"ts":"2026-11-18T11:55:41.130Z"}
+{"type":"step_start","index":3,"objective":"Step 3","v":1,"ts":"2026-11-18T11:55:41.131Z"}
+{"type":"step_event","index":3,"event":"screenshot","detail":"http://localhost:4000/","v":1,"ts":"2026-11-18T11:55:41.188Z"}
+{"type":"step_event","index":3,"event":"action","detail":"Type \"bowl\" into \"Search\"","action_type":"fill","success":true,"v":1,"ts":"2026-11-18T11:55:41.306Z"}
+{"type":"step_event","index":3,"event":"reasoning","detail":"Type \"bowl\" into \"Search\"","action_type":"fill","v":1,"ts":"2026-11-18T11:55:41.306Z"}
+{"type":"step_end","index":3,"status":"passed","duration":0.2,"summary":"fill: Type \"bowl\" into \"Search\"","ordinal":3,"id":"0-3","kind":"fill","screenshot":"screenshot.jpg","action_id":"6acddae7-61c5-4d5c-9040-dc63cc1ebf69","v":1,"ts":"2026-11-18T11:55:41.368Z"}
+{"type":"step_start","index":4,"objective":"Step 4","v":1,"ts":"2026-11-18T11:55:41.368Z"}
+{"type":"step_event","index":4,"event":"screenshot","detail":"http://localhost:4000/","v":1,"ts":"2026-11-18T11:55:41.443Z"}
+{"type":"step_event","index":4,"event":"action","detail":"Press Enter","action_type":"press_key","success":true,"v":1,"ts":"2026-11-18T11:55:41.963Z"}
+{"type":"step_event","index":4,"event":"reasoning","detail":"Press Enter","action_type":"press_key","v":1,"ts":"2026-11-18T11:55:41.963Z"}
+{"type":"step_end","index":4,"status":"passed","duration":0.6,"summary":"press_key: Press Enter","ordinal":4,"id":"0-4","kind":"press_key","screenshot":"screenshot.jpg","action_id":"113c9c32-9efd-44b8-aa62-33a1c5565dcb","v":1,"ts":"2026-11-18T11:55:41.965Z"}
+{"type":"run_end","run_id":"run-0","status":"passed","summary":"","reason":"replay completed","duration":2.45,"final_url":"http://localhost:4000/","actions_executed":4,"screenshot_path":"~/.testmuai/kaneai/sessions/8e81e3f5-45b6-4d1d-a9cd-4ab60a9a8d87/scratch/0/replay-test/screenshots/step_004.png","run_dir":"~/.testmuai/kaneai/sessions/8e81e3f5-45b6-4d1d-a9cd-4ab60a9a8d87/scratch/0/replay-test","total_runs":1,"context":{"memory":{},"variables":{},"pointer":""},"variables_out":{},"store_out":{},"result_code":100,"reason_code":"success.complete","v":1,"ts":"2026-11-18T11:55:41.972Z"}
+{"type":"test_md_step_end","step_index":1,"status":"passed","duration_s":2.45,"ref_kind":null,"unit_kind":null,"inlined_count":null,"failed_sub_step_index":null,"v":1,"ts":"2026-11-18T11:55:41.973Z"}
+{"type":"test_md_step_start","step_index":2,"heading":"Check the expected outcome","ref":null,"v":1,"ts":"2026-11-18T11:55:41.974Z"}
+{"type":"run_start","objective":"Verify that the results page shows the Tide Pool Bowl and the Moss Serving Bowl.\nVerify that no mugs are listed in the results.","timestamp":1795002942,"environment":{"resolution":"1920x1080"},"v":1,"ts":"2026-11-18T11:55:42.002Z"}
+{"type":"step_event","index":0,"event":"replay_started","detail":"replaying 5 actions","recording_length":5,"v":1,"ts":"2026-11-18T11:55:42.003Z"}
+{"type":"step_start","index":1,"objective":"Step 1","v":1,"ts":"2026-11-18T11:55:42.006Z"}
+{"type":"step_event","index":1,"event":"screenshot","detail":"http://localhost:4000/search?q=bowl","v":1,"ts":"2026-11-18T11:55:42.081Z"}
+{"type":"step_event","index":1,"event":"action","detail":"Checking whether the Tide Pool Bowl is present in the results","action_type":"analyze","success":true,"v":1,"ts":"2026-11-18T11:55:42.116Z"}
+{"type":"step_event","index":1,"event":"reasoning","detail":"Checking whether the Tide Pool Bowl is present in the results","action_type":"analyze","v":1,"ts":"2026-11-18T11:55:42.116Z"}
+{"type":"step_end","index":1,"status":"passed","duration":0.1,"summary":"analyze: Checking whether the Tide Pool Bowl is present in the results","ordinal":5,"id":"1-1","kind":"analyze","screenshot":"screenshot.jpg","action_id":"60c1e1d0-ae8f-4d3f-90ff-5dcc1ffd02fb","v":1,"ts":"2026-11-18T11:55:42.117Z"}
+{"type":"step_start","index":2,"objective":"Step 2","v":1,"ts":"2026-11-18T11:55:42.117Z"}
+{"type":"step_event","index":2,"event":"screenshot","detail":"http://localhost:4000/search?q=bowl","v":1,"ts":"2026-11-18T11:55:42.186Z"}
+{"type":"step_event","index":2,"event":"action","detail":"Checking whether the Moss Serving Bowl is present in the results","action_type":"analyze","success":true,"v":1,"ts":"2026-11-18T11:55:42.213Z"}
+{"type":"step_event","index":2,"event":"reasoning","detail":"Checking whether the Moss Serving Bowl is present in the results","action_type":"analyze","v":1,"ts":"2026-11-18T11:55:42.213Z"}
+{"type":"step_end","index":2,"status":"passed","duration":0.1,"summary":"analyze: Checking whether the Moss Serving Bowl is present in the results","ordinal":6,"id":"1-2","kind":"analyze","screenshot":"screenshot.jpg","action_id":"5f76f4fb-8e80-4009-b5b2-26ed4ae7bd3b","v":1,"ts":"2026-11-18T11:55:42.214Z"}
+{"type":"step_start","index":3,"objective":"Step 3","v":1,"ts":"2026-11-18T11:55:42.215Z"}
+{"type":"step_event","index":3,"event":"screenshot","detail":"http://localhost:4000/search?q=bowl","v":1,"ts":"2026-11-18T11:55:42.286Z"}
+{"type":"step_event","index":3,"event":"action","detail":"Checking whether mugs are present in the results","action_type":"analyze","success":true,"v":1,"ts":"2026-11-18T11:55:51.455Z"}
+{"type":"step_event","index":3,"event":"reasoning","detail":"Checking whether mugs are present in the results","action_type":"analyze","v":1,"ts":"2026-11-18T11:55:51.455Z"}
+{"type":"step_end","index":3,"status":"passed","duration":9.2,"summary":"analyze: Checking whether mugs are present in the results","ordinal":7,"id":"1-3","kind":"analyze","screenshot":"screenshot.jpg","action_id":"b593baee-9e47-4b5d-8253-762a282abc2d","v":1,"ts":"2026-11-18T11:55:51.457Z"}
+{"type":"step_start","index":4,"objective":"Step 4","v":1,"ts":"2026-11-18T11:55:51.457Z"}
+{"type":"step_event","index":4,"event":"screenshot","detail":"http://localhost:4000/search?q=bowl","v":1,"ts":"2026-11-18T11:55:51.520Z"}
+{"type":"step_event","index":4,"event":"assertion","detail":"the results page shows the Tide Pool Bowl and the Moss Serving Bowl","passed":true,"v":1,"ts":"2026-11-18T11:55:51.522Z"}
+{"type":"step_end","index":4,"status":"passed","duration":0.1,"summary":"assert: the results page shows the Tide Pool Bowl and the Moss Serving Bowl","ordinal":8,"id":"1-4","kind":"assert","screenshot":"screenshot.jpg","action_id":"e0077ebd-767e-4b98-9d2f-10e07917c909","v":1,"ts":"2026-11-18T11:55:51.523Z"}
+{"type":"step_start","index":5,"objective":"Step 5","v":1,"ts":"2026-11-18T11:55:51.523Z"}
+{"type":"step_event","index":5,"event":"screenshot","detail":"http://localhost:4000/search?q=bowl","v":1,"ts":"2026-11-18T11:55:51.563Z"}
+{"type":"step_event","index":5,"event":"assertion","detail":"no mugs are listed in the results","passed":true,"v":1,"ts":"2026-11-18T11:55:51.565Z"}
+{"type":"step_end","index":5,"status":"passed","duration":0,"summary":"assert: no mugs are listed in the results","ordinal":9,"id":"1-5","kind":"assert","screenshot":"screenshot.jpg","action_id":"7269255f-0e52-4ee0-941c-1c9355640fc4","v":1,"ts":"2026-11-18T11:55:51.566Z"}
+{"type":"run_end","run_id":"run-1","status":"passed","summary":"","reason":"replay completed","duration":9.59,"final_url":"http://localhost:4000/search?q=bowl","actions_executed":5,"screenshot_path":"~/.testmuai/kaneai/sessions/8e81e3f5-45b6-4d1d-a9cd-4ab60a9a8d87/scratch/1/replay-test/screenshots/step_005.png","run_dir":"~/.testmuai/kaneai/sessions/8e81e3f5-45b6-4d1d-a9cd-4ab60a9a8d87/scratch/1/replay-test","total_runs":1,"context":{"memory":{},"variables":{"tide_pool_bowl_shown":{"syntax":"{{tide_pool_bowl_shown}}","value":"true","secret":false},"moss_serving_bowl_shown":{"syntax":"{{moss_serving_bowl_shown}}","value":"true","secret":false},"mugs_listed_in_results":{"syntax":"{{mugs_listed_in_results}}","value":"false","secret":false}},"pointer":""},"variables_out":{"tide_pool_bowl_shown":{"syntax":"{{tide_pool_bowl_shown}}","value":"true","secret":false},"moss_serving_bowl_shown":{"syntax":"{{moss_serving_bowl_shown}}","value":"true","secret":false},"mugs_listed_in_results":{"syntax":"{{mugs_listed_in_results}}","value":"false","secret":false}},"store_out":{},"result_code":100,"reason_code":"success.complete","v":1,"ts":"2026-11-18T11:55:51.569Z"}
+{"type":"test_md_step_end","step_index":2,"status":"passed","duration_s":9.59,"ref_kind":null,"unit_kind":null,"inlined_count":null,"failed_sub_step_index":null,"v":1,"ts":"2026-11-18T11:55:51.569Z"}
+{"type":"test_md_evidence_ingest","status":"ok","evidence_id":"012e521c-e683-4b27-a0b0-e1147bdb2c0c","v":1,"ts":"2026-11-18T11:55:55.670Z"}
+{"type":"test_md_summary","overall_status":"passed","duration_s":15,"steps":{"total":2,"passed":2,"failed":0,"skipped":0,"replay_decisions":2,"author_decisions":0},"adaptive_heal":{"triggered":false},"commit":{"committed":false,"reason":"readonly_fallback"},"artifacts":{"replaced":false},"upload":{"performed":true,"succeeded":true},"cancelled":false,"v":1,"ts":"2026-11-18T11:55:55.672Z"}
+{"type":"coverage","status":"skipped","reason":"not_assurance_project","pack":"~/.testmuai/kaneai/sessions/8e81e3f5-45b6-4d1d-a9cd-4ab60a9a8d87/evidence/012e521c-e683-4b27-a0b0-e1147bdb2c0c.evidence","v":1,"ts":"2026-11-18T11:55:55.677Z"}
+{"type":"test_md_done","overall_status":"passed","duration_s":15,"session_id":"8e81e3f5-45b6-4d1d-a9cd-4ab60a9a8d87","coverage":{"status":"skipped"},"v":1,"ts":"2026-11-18T11:55:55.678Z"}

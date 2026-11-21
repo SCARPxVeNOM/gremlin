@@ -1,0 +1,113 @@
+{
+  "pack": "~/.testmuai/kaneai/sessions/7cf89162-f710-416f-97dd-4163bd0af3d1/evidence/aef53116-444e-4180-9e42-3b8d51c822e1.evidence",
+  "consoleErrors": [
+    "Failed to load resource: the server responded with a status of 404 (Not Found)"
+  ],
+  "networkFailures": [],
+  "steps": [
+    {
+      "ordinal": 1,
+      "id": "0-1",
+      "kind": "navigate",
+      "status": "passed",
+      "summary": "navigate: Navigate to http://localhost:4000/product/ash-glaze-mug",
+      "url": "https://kaneai-playground.lambdatest.io/",
+      "screenshot": "step-1-0-1.jpg"
+    },
+    {
+      "ordinal": 2,
+      "id": "0-2",
+      "kind": "click",
+      "status": "passed",
+      "summary": "click: Clicking Add to cart for Ash Glaze Mug",
+      "url": "http://localhost:4000/product/ash-glaze-mug",
+      "screenshot": "step-2-0-2.jpg"
+    },
+    {
+      "ordinal": 3,
+      "id": "1-1",
+      "kind": "click",
+      "status": "passed",
+      "summary": "click: Clicking View cart",
+      "url": "http://localhost:4000/product/ash-glaze-mug",
+      "screenshot": "step-3-1-1.jpg"
+    },
+    {
+      "ordinal": 4,
+      "id": "2-1",
+      "kind": "click",
+      "status": "passed",
+      "summary": "click: Clicking Checkout link",
+      "url": "http://localhost:4000/cart",
+      "screenshot": "step-4-2-1.jpg"
+    },
+    {
+      "ordinal": 5,
+      "id": "2-2",
+      "kind": "wait",
+      "status": "passed",
+      "summary": "wait: Waiting for the coupon code to be applied",
+      "url": "http://localhost:4000/checkout",
+      "screenshot": "step-5-2-2.jpg"
+    },
+    {
+      "ordinal": 6,
+      "id": "2-3",
+      "kind": "fill",
+      "status": "passed",
+      "summary": "fill: Type \"welcome10\" into \"Coupon code\"",
+      "url": "http://localhost:4000/checkout",
+      "screenshot": "step-6-2-3.jpg"
+    },
+    {
+      "ordinal": 7,
+      "id": "2-4",
+      "kind": "click",
+      "status": "passed",
+      "summary": "click: Click \"Apply\"",
+      "url": "http://localhost:4000/checkout",
+      "screenshot": "step-7-2-4.jpg"
+    },
+    {
+      "ordinal": 8,
+      "id": "3-1",
+      "kind": "analyze",
+      "status": "passed",
+      "summary": "analyze: the order summary shows a discount of $2.80",
+      "url": "http://localhost:4000/checkout",
+      "screenshot": "step-8-3-1.jpg"
+    },
+    {
+      "ordinal": 9,
+      "id": "3-2",
+      "kind": "assert",
+      "status": "failed",
+      "summary": "assert: the message \"That coupon code is not valid.\" is not shown",
+      "url": "http://localhost:4000/checkout",
+      "screenshot": "step-9-3-2.jpg"
+    }
+  ],
+  "screenshots": [
+    "step-1-0-1.jpg",
+    "step-2-0-2.jpg",
+    "step-3-1-1.jpg",
+    "step-4-2-1.jpg",
+    "step-5-2-2.jpg",
+    "step-6-2-3.jpg",
+    "step-7-2-4.jpg",
+    "step-8-3-1.jpg",
+    "step-9-3-2.jpg"
+  ],
+  "failure": {
+    "step": "3-2",
+    "message": "Checkpoint assertion failed: \"the message \"That coupon code is not valid.\" is not shown\"",
+    "pageUrl": "http://localhost:4000/checkout",
+    "title": "Welcome discount code is rejected at checkout",
+    "rootCause": "The checkout treated the welcome coupon as invalid, so it did not show the welcome-discount message or apply the expected $2.80 discount.",
+    "category": "application_issue/validation_defect",
+    "confidence": 0.97,
+    "severity": "major",
+    "suggestedFix": "Check the checkout coupon rules and welcome-code configuration so the intended welcome code is accepted and applies 10% off.",
+    "screenshot": "step-9-3-2.jpg"
+  }
+}

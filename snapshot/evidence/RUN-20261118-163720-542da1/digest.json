@@ -1,0 +1,133 @@
+{
+  "pack": "~/.testmuai/kaneai/sessions/38a2e0e2-e888-4ec9-a770-3c6b4e284e10/evidence/541ca7ad-56f7-4e2f-82bf-371b2f8f404c.evidence",
+  "consoleErrors": [
+    "Failed to load resource: the server responded with a status of 404 (Not Found)"
+  ],
+  "networkFailures": [],
+  "steps": [
+    {
+      "ordinal": 1,
+      "id": "0-1",
+      "kind": "navigate",
+      "status": "passed",
+      "summary": "navigate: Navigate to http://localhost:4000/product/ash-glaze-mug",
+      "url": "http://localhost:4000/product/ash-glaze-mug",
+      "screenshot": "step-1-0-1.jpg"
+    },
+    {
+      "ordinal": 2,
+      "id": "0-2",
+      "kind": "click",
+      "status": "passed",
+      "summary": "click: Clicking Add to cart",
+      "url": "http://localhost:4000/product/ash-glaze-mug",
+      "screenshot": "step-2-0-2.jpg"
+    },
+    {
+      "ordinal": 3,
+      "id": "0-3",
+      "kind": "",
+      "status": "passed",
+      "summary": "wait: Waiting briefly after confirming the cart badge shows 1",
+      "url": "http://localhost:4000/product/ash-glaze-mug",
+      "screenshot": "step-3-0-3.jpg"
+    },
+    {
+      "ordinal": 4,
+      "id": "1-1",
+      "kind": "wait",
+      "status": "passed",
+      "summary": "wait: PRIMARY: wait for the \"Added to cart\" message",
+      "url": "http://localhost:4000/product/ash-glaze-mug",
+      "screenshot": "step-4-1-1.jpg"
+    },
+    {
+      "ordinal": 5,
+      "id": "1-2",
+      "kind": "",
+      "status": "passed",
+      "summary": "wait: Waiting confirm the \"Added to cart\" message is visible",
+      "url": "http://localhost:4000/product/ash-glaze-mug",
+      "screenshot": "step-5-1-2.jpg"
+    },
+    {
+      "ordinal": 6,
+      "id": "2-1",
+      "kind": "click",
+      "status": "passed",
+      "summary": "click: Clicking View cart",
+      "url": "http://localhost:4000/product/ash-glaze-mug",
+      "screenshot": "step-6-2-1.jpg"
+    },
+    {
+      "ordinal": 7,
+      "id": "3-1",
+      "kind": "type",
+      "status": "passed",
+      "summary": "type: Typing -3 in Quantity field",
+      "url": "http://localhost:4000/cart",
+      "screenshot": "step-7-3-1.jpg"
+    },
+    {
+      "ordinal": 8,
+      "id": "3-2",
+      "kind": "",
+      "status": "passed",
+      "summary": "wait: Waiting after confirming the Ash Glaze Mug Quantity field displays -3",
+      "url": "http://localhost:4000/cart",
+      "screenshot": "step-8-3-2.jpg"
+    },
+    {
+      "ordinal": 9,
+      "id": "4-1",
+      "kind": "click",
+      "status": "passed",
+      "summary": "click: Clicking Update in your cart list",
+      "url": "http://localhost:4000/cart",
+      "screenshot": "step-9-4-1.jpg"
+    },
+    {
+      "ordinal": 10,
+      "id": "5-1",
+      "kind": "analyze",
+      "status": "passed",
+      "summary": "analyze: an error message is shown",
+      "url": "http://localhost:4000/cart",
+      "screenshot": "step-10-5-1.jpg"
+    },
+    {
+      "ordinal": 11,
+      "id": "5-2",
+      "kind": "assert",
+      "status": "failed",
+      "summary": "assert: the cart Total is not a negative amount",
+      "url": "http://localhost:4000/cart",
+      "screenshot": "step-11-5-2.jpg"
+    }
+  ],
+  "screenshots": [
+    "step-1-0-1.jpg",
+    "step-2-0-2.jpg",
+    "step-3-0-3.jpg",
+    "step-4-1-1.jpg",
+    "step-5-1-2.jpg",
+    "step-6-2-1.jpg",
+    "step-7-3-1.jpg",
+    "step-8-3-2.jpg",
+    "step-9-4-1.jpg",
+    "step-10-5-1.jpg",
+    "step-11-5-2.jpg"
+  ],
+  "failure": {
+    "step": "5-2",
+    "message": "Checkpoint assertion failed: \"the cart Total is not a negative amount\"",
+    "pageUrl": "http://localhost:4000/cart",
+    "title": "Cart accepts negative item quantities and calculates a negative total",
+    "rootCause": "The cart does not block a negative quantity or restore the item quantity to 1. It uses the negative value to calculate the line item, cart total, and header count.",
+    "category": "application_issue/validation_defect",
+    "confidence": 0.99,
+    "severity": "major",
+    "suggestedFix": "Reject quantities below 1 on update, show a clear validation message, keep the existing valid quantity, and prevent negative values from affecting the header count or totals.",
+    "screenshot": "step-11-5-2.jpg"
+  }
+}

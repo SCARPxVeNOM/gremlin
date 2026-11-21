@@ -1,0 +1,100 @@
+{
+  "pack": "~/.testmuai/kaneai/sessions/72677f3a-39bf-428c-8b77-ad4ec0251b50/evidence/f94a5eeb-71cc-4d9e-8cec-bbb3f2b4c927.evidence",
+  "consoleErrors": [
+    "Failed to load resource: the server responded with a status of 404 (Not Found)",
+    "Failed to load resource: the server responded with a status of 500 (Internal Server Error)"
+  ],
+  "networkFailures": [
+    {
+      "method": "GET",
+      "url": "http://localhost:4000/search?q=100%25+%3Cb%3Eoff%3C%2Fb%3E",
+      "status": 500
+    }
+  ],
+  "steps": [
+    {
+      "ordinal": 1,
+      "id": "0-1",
+      "kind": "navigate",
+      "status": "passed",
+      "summary": "navigate: Navigate to http://localhost:4000/",
+      "url": "http://localhost:4000/",
+      "screenshot": "step-1-0-1.jpg"
+    },
+    {
+      "ordinal": 2,
+      "id": "0-2",
+      "kind": "",
+      "status": "passed",
+      "summary": "wait: Waiting Go to /",
+      "url": "http://localhost:4000/",
+      "screenshot": "step-2-0-2.jpg"
+    },
+    {
+      "ordinal": 3,
+      "id": "1-1",
+      "kind": "type",
+      "status": "passed",
+      "summary": "type: Typing 100% off in the search box",
+      "url": "http://localhost:4000/",
+      "screenshot": "step-3-1-1.jpg"
+    },
+    {
+      "ordinal": 4,
+      "id": "1-2",
+      "kind": "click",
+      "status": "passed",
+      "summary": "click: Clicking Search button near the top header",
+      "url": "http://localhost:4000/",
+      "screenshot": "step-4-1-2.jpg"
+    },
+    {
+      "ordinal": 5,
+      "id": "1-3",
+      "kind": "",
+      "status": "passed",
+      "summary": "wait: Waiting after submitting the requested search",
+      "url": "http://localhost:4000/search?q=100%25+%3Cb%3Eoff%3C%2Fb%3E",
+      "screenshot": "step-5-1-3.jpg"
+    },
+    {
+      "ordinal": 6,
+      "id": "2-1",
+      "kind": "analyze",
+      "status": "passed",
+      "summary": "analyze: No \"something went wrong\" message appears.",
+      "url": "http://localhost:4000/search?q=100%25+%3Cb%3Eoff%3C%2Fb%3E",
+      "screenshot": "step-6-2-1.jpg"
+    },
+    {
+      "ordinal": 7,
+      "id": "2-2",
+      "kind": "assert",
+      "status": "failed",
+      "summary": "assert: A results page loads, even if it shows no results.",
+      "url": "http://localhost:4000/search?q=100%25+%3Cb%3Eoff%3C%2Fb%3E",
+      "screenshot": "step-7-2-2.jpg"
+    }
+  ],
+  "screenshots": [
+    "step-1-0-1.jpg",
+    "step-2-0-2.jpg",
+    "step-3-1-1.jpg",
+    "step-4-1-2.jpg",
+    "step-5-1-3.jpg",
+    "step-6-2-1.jpg",
+    "step-7-2-2.jpg"
+  ],
+  "failure": {
+    "step": "2-2",
+    "message": "Checkpoint assertion failed: \"A results page loads, even if it shows no results.\"",
+    "pageUrl": "http://localhost:4000/search?q=100%25+%3Cb%3Eoff%3C%2Fb%3E",
+    "title": "Search query with markup renders generic error page",
+    "rootCause": "The search page cannot handle the supplied search text safely. Rather than showing the query as plain text and returning results or an empty-results state, it shows an error screen.",
+    "category": "application_issue/functional_defect",
+    "confidence": 0.96,
+    "severity": "major",
+    "suggestedFix": "Investigate search handling for queries containing percent signs and HTML-like markup. Escape the query for display and ensure such input returns a normal results or no-results page rather than the generic error screen.",
+    "screenshot": "step-7-2-2.jpg"
+  }
+}

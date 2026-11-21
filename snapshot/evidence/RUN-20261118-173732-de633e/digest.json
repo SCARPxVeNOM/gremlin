@@ -1,0 +1,118 @@
+{
+  "pack": "~/.testmuai/kaneai/sessions/91e2512b-d8aa-4fba-ae29-ce7ebc570405/evidence/d73fd277-887e-4634-a989-1abeb819c57e.evidence",
+  "consoleErrors": [
+    "Failed to load resource: the server responded with a status of 404 (Not Found)",
+    "Failed to load resource: the server responded with a status of 400 (Bad Request)"
+  ],
+  "networkFailures": [
+    {
+      "method": "POST",
+      "url": "http://localhost:4000/api/cart/update",
+      "status": 400
+    }
+  ],
+  "steps": [
+    {
+      "ordinal": 1,
+      "id": "0-1",
+      "kind": "navigate",
+      "status": "passed",
+      "summary": "navigate: Navigate to http://localhost:4000/product/ash-glaze-mug",
+      "url": "https://kaneai-playground.lambdatest.io/",
+      "screenshot": "step-1-0-1.jpg"
+    },
+    {
+      "ordinal": 2,
+      "id": "0-2",
+      "kind": "click",
+      "status": "passed",
+      "summary": "click: Clicking Add to cart",
+      "url": "http://localhost:4000/product/ash-glaze-mug",
+      "screenshot": "step-2-0-2.jpg"
+    },
+    {
+      "ordinal": 3,
+      "id": "1-1",
+      "kind": "wait",
+      "status": "passed",
+      "summary": "wait: Waiting for the Added to cart message",
+      "url": "http://localhost:4000/product/ash-glaze-mug",
+      "screenshot": "step-3-1-1.jpg"
+    },
+    {
+      "ordinal": 4,
+      "id": "2-1",
+      "kind": "click",
+      "status": "passed",
+      "summary": "click: Clicking View cart",
+      "url": "http://localhost:4000/product/ash-glaze-mug",
+      "screenshot": "step-4-2-1.jpg"
+    },
+    {
+      "ordinal": 5,
+      "id": "3-1",
+      "kind": "fill",
+      "status": "passed",
+      "summary": "fill: Typing -3 in Quantity field",
+      "url": "http://localhost:4000/cart",
+      "screenshot": "step-5-3-1.jpg"
+    },
+    {
+      "ordinal": 6,
+      "id": "4-1",
+      "kind": "click",
+      "status": "passed",
+      "summary": "click: Clicking Update in your cart list",
+      "url": "http://localhost:4000/cart",
+      "screenshot": "step-6-4-1.jpg"
+    },
+    {
+      "ordinal": 7,
+      "id": "5-1",
+      "kind": "analyze",
+      "status": "passed",
+      "summary": "analyze: the Ash Glaze Mug quantity stays at 1",
+      "url": "http://localhost:4000/cart",
+      "screenshot": "step-7-5-1.jpg"
+    },
+    {
+      "ordinal": 8,
+      "id": "5-2",
+      "kind": "assert",
+      "status": "passed",
+      "summary": "assert: the cart Total is not a negative amount",
+      "url": "http://localhost:4000/cart",
+      "screenshot": "step-8-5-2.jpg"
+    },
+    {
+      "ordinal": 9,
+      "id": "5-3",
+      "kind": "assert",
+      "status": "passed",
+      "summary": "assert: the Ash Glaze Mug quantity is not negative: either an error message is shown or ",
+      "url": "http://localhost:4000/cart",
+      "screenshot": "step-9-5-3.jpg"
+    },
+    {
+      "ordinal": 10,
+      "id": "5-4",
+      "kind": "assert",
+      "status": "passed",
+      "summary": "assert: the cart count in the header is not a negative number",
+      "url": "http://localhost:4000/cart",
+      "screenshot": "step-10-5-4.jpg"
+    }
+  ],
+  "screenshots": [
+    "step-1-0-1.jpg",
+    "step-2-0-2.jpg",
+    "step-3-1-1.jpg",
+    "step-4-2-1.jpg",
+    "step-5-3-1.jpg",
+    "step-6-4-1.jpg",
+    "step-7-5-1.jpg",
+    "step-8-5-2.jpg",
+    "step-9-5-3.jpg",
+    "step-10-5-4.jpg"
+  ]
+}
