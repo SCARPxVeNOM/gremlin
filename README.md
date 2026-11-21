@@ -24,7 +24,7 @@
   <a href="#for-judges">For judges</a> ·
   <a href="#one-bug-end-to-end">One bug, end to end</a> ·
   <a href="#quickstart">Quickstart</a> ·
-  <a href="#try-it-on-kiln">Try it on the demo shop</a> ·
+  <a href="#try-it-one-bug-in-two-commands">Try it in two commands</a> ·
   <a href="#how-the-loop-closes">How the loop closes</a> ·
   <a href="#honest-limits">Honest limits</a>
 </p>
@@ -70,6 +70,27 @@ Breaker: a hostile user's attack ──────────┘              
                                     then to a human
 ```
 
+## Try it: one bug in two commands
+
+You need Node 20+, Chrome, Kane CLI signed in and Claude Code signed in. The demo shop in this repo has the coupon
+bug from the email above.
+
+```bash
+npm install -g @testmuai/kane-cli gremlin-qa && kane-cli login
+git clone https://github.com/SCARPxVeNOM/gremlin.git && cd gremlin/examples/kiln
+
+gremlin capture --file complaint.txt   # the customer's email → a flow; Kane must watch it fail: BUG-001
+gremlin fix BUG-001 --yes              # Claude Code fixes server.js; Kane watches the same flow pass; it's locked
+gremlin dash                           # Kane's runs, screenshots and the fix
+```
+
+From a fresh clone with gremlin-qa 0.1.0 on 21 Nov, this took about 5 minutes and 90 Kane credits:
+- Capture took 3 min 20 s. Kane failed the flow twice and blamed the product (97%).
+- Claude Code's fix took 24 s.
+- Kane's re-run took 28 s, and its 2 related replays cost 0 credits.
+
+No Kane account? [Browse a recorded session live](https://scarpxvenom.github.io/gremlin/) instead.
+
 ## See it working
 
 Each result below comes from real Kane CLI runs, and you can open every one of them.
@@ -78,6 +99,7 @@ Each result below comes from real Kane CLI runs, and you can open every one of t
 | --- | --- | --- |
 | **Live in GitHub Actions** | An issue on the [kiln-shop](https://github.com/SCARPxVeNOM/kiln-shop) demo repo was labelled `gremlin`. Kane reproduced the failure but blamed the test. The agent disagreed, citing the code, and the repo owner settled it with the `gremlin:confirmed` label. Claude Code fixed it on the first attempt, Kane watched the same flow pass, and the Action opened a pull request. No human touched the code. | [Issue #5](https://github.com/SCARPxVeNOM/kiln-shop/issues/5) · [Action run](https://github.com/SCARPxVeNOM/kiln-shop/actions/runs/44783854641) · [PR #6](https://github.com/SCARPxVeNOM/kiln-shop/pull/6) |
 | **A real open-source app** | The Breaker attacked a fork of [IT Tools](https://github.com/CorentinTh/it-tools) (41k stars). Kane judged 3 failures to be product bugs. A human rejected one as working by design, and Claude Code fixed the other two, each proven by Kane. | [PR #1](https://github.com/SCARPxVeNOM/it-tools/pull/1) · [PR #2](https://github.com/SCARPxVeNOM/it-tools/pull/2) |
+| **A second open-source app** | Gremlin attacked a fork of [Invoify](https://github.com/al1abb/invoify) (6k stars), a Next.js invoice generator. Kane confirmed 4 product bugs, among them a negative discount that raises the invoice total. A human rejected one as a duplicate, and Claude Code fixed the other three, each proven by Kane. | [PR #1](https://github.com/SCARPxVeNOM/invoify/pull/1) · [PR #2](https://github.com/SCARPxVeNOM/invoify/pull/2) · [PR #3](https://github.com/SCARPxVeNOM/invoify/pull/3) |
 | **Agent arena** | Three Claude Code models (Opus, Sonnet, Haiku) fixed the same search bug at once. Kane judged every fix in a browser, and the smallest one that passed became the pull request. | [Issue #3 → PR #4](https://github.com/SCARPxVeNOM/kiln-shop/pull/4) |
 | **A recorded session** | 43 Kane runs on the Kiln shop: 5 bugs found, 2 fixed and proven, and a regression caught by the Claude Code Stop hook. Every flow, run, screenshot and fix package is committed. | [`docs/demo-run`](docs/demo-run) |
 
@@ -193,7 +215,7 @@ Where to see each bar and each scoring dimension, with the demo video's timestam
 | | Where to see it |
 | --- | --- |
 | **Works end to end** | [Issue #5](https://github.com/SCARPxVeNOM/kiln-shop/issues/5) → [Action run](https://github.com/SCARPxVeNOM/kiln-shop/actions/runs/44783854641) → [PR #6](https://github.com/SCARPxVeNOM/kiln-shop/pull/6): a label in, a Kane-proven pull request out, no human touching the code ([video 2:08](https://youtu.be/fk5jF-6zMa8?t=128)) |
-| **Kane caught or proved something** | Kane watched the lowercase coupon fail and the fix pass ([video 0:41](https://youtu.be/fk5jF-6zMa8?t=41)); on [IT Tools](docs/proof.md#it-tools-a-real-open-source-app) (41k stars) it confirmed 3 product bugs, and proved fixes for the 2 a human agreed were bugs |
+| **Kane caught or proved something** | Kane watched the lowercase coupon fail and the fix pass ([video 0:41](https://youtu.be/fk5jF-6zMa8?t=41)); on [IT Tools](docs/proof.md#it-tools-a-real-open-source-app) (41k stars) it confirmed 3 product bugs, and proved fixes for the 2 a human agreed were bugs; on [Invoify](docs/proof.md#invoify-a-second-open-source-app) it confirmed 4, among them a negative discount that raises the total, and proved 3 fixes |
 | **The agent and Kane talk** | Kane's evidence pack is the agent's prompt; the Claude Code Stop hook blocked "done" twice with Kane's evidence when a fixed bug came back ([recorded session](docs/proof.md#the-recorded-session-docsdemo-run), [video 2:54](https://youtu.be/fk5jF-6zMa8?t=174)) |
 | **Ships** | `npm install -g gremlin-qa`, a [GitHub Action](#github-action), a local dashboard, connectors for Claude Code, Codex, Cursor and Gemini |
 | **Verified** | Every pass and fail is a Kane CLI run with an evidence pack; Kane's triage separates product bugs from faults in the test; all 43 runs of the [recorded session](docs/demo-run) are committed |
@@ -251,15 +273,15 @@ flows are already recorded, so replaying them costs nothing.
 
 ```bash
 cd examples/kiln
-gremlin doctor                 # Kane signed in? agent found? shop reachable?
-gremlin run --all              # replays 3 happy flows from Kane's cache (Gremlin starts the shop)
-gremlin capture                # paste the coupon complaint below: Kane must watch it fail
-gremlin fix BUG-001            # Claude Code fixes it, Kane proves it, the flow is locked
-gremlin break --max 6          # Breaker hunt: Claude Code reads server.js and proposes attacks
+gremlin doctor                         # Kane signed in? agent found? shop reachable?
+gremlin run --all                      # replays 3 happy flows from Kane's cache (Gremlin starts the shop)
+gremlin capture --file complaint.txt   # the coupon complaint below: Kane must watch it fail
+gremlin fix BUG-001                    # Claude Code fixes it, Kane proves it, the flow is locked
+gremlin break --max 6                  # Breaker hunt: Claude Code reads server.js and proposes attacks
 gremlin dash
 ```
 
-A complaint to paste into Capture:
+`complaint.txt` holds this complaint. You can also paste it into `gremlin capture`, or into Capture in the dashboard:
 
 ```text
 Hi Kiln team, I'm Priya Sharma (priya.sharma@gmail.com, +1 415 555 0134).
@@ -305,8 +327,8 @@ cd docs/demo-run && gremlin dash
   Kane was 98% sure an IT Tools finding was a product bug, and a human rejected it because the tool only claims to handle
   five characters. Gremlin never overrules Kane on its own.
 - **The test apps are small.** Kiln's bugs were planted (except that cart bug), and the regression in step 5 of
-  [One bug, end to end](#one-bug-end-to-end) was made by hand. IT Tools is a real codebase, but Gremlin ran on a fork on
-  one laptop, and none of its pull requests has been merged by a maintainer. Gremlin hasn't run on a team's production
+  [One bug, end to end](#one-bug-end-to-end) was made by hand. IT Tools and Invoify are real codebases, but Gremlin ran on
+  forks on one laptop, and none of their pull requests has been merged by a maintainer. Gremlin hasn't run on a team's production
   codebase yet.
 - **Web only, for now.** The config and flows accept `ios` and `android`, but Gremlin only runs Kane's browser tests
   today; Kane's mobile runs aren't wired in.
@@ -328,7 +350,8 @@ The point of Gremlin is that **Kane's verdict always flows back to an agent**, a
    headless (`claude -p`, `codex exec`, `cursor-agent`, `gemini`, or any command) with a fix package: the flow, the failing
    step, Kane's triage (as *a lead, not an instruction*), console and network errors, screenshot paths and the code that
    most likely matters. Then Kane re-runs the flow and up to four related flows. If one fails, the next attempt gets the
-   new evidence. After `loop.attempts` tries the bug escalates to a human with everything attached.
+   new evidence. After `loop.attempts` tries the bug escalates to a human with everything attached. If the agent
+   couldn't start at all (a usage limit, a sign-in), no attempt is spent and the bug stays as it was.
 2. **Claude Code Stop hook** (`gremlin install claude`). When Claude finishes a turn, Gremlin diffs the session against
    its baseline, maps changed files to flows through `guard.areas`, and has Kane replay them. A failure returns
    `{"decision": "block", "reason": <Kane's evidence>}`, so Claude keeps working with the evidence as its next prompt.

@@ -34,10 +34,10 @@ All times are UTC. Unless a date is given, they are on 20 November 2026.
 | Claim | Evidence | Criterion |
 | --- | --- | --- |
 | A report only becomes a bug once Kane has watched it fail | [Issue #5](https://github.com/SCARPxVeNOM/kiln-shop/issues/5): [Kane's failing step and verdict](https://github.com/SCARPxVeNOM/kiln-shop/issues/5#issuecomment-7046276945). [PR #6](https://github.com/SCARPxVeNOM/kiln-shop/pull/6): the *Before* run `RUN-20261120-173046-174fe6` and [kane-before.jpg](https://github.com/SCARPxVeNOM/kiln-shop/blob/d2aa250a93729d63a9b7eeae0196fd1ef150d1e4/.gremlin/bugs/BUG-004/kane-before.jpg) | Verified |
-| The coding agent fixes the product, and a fix counts only when Kane passes the same flow | kiln-shop [PR #6](https://github.com/SCARPxVeNOM/kiln-shop/pull/6), [PR #2](https://github.com/SCARPxVeNOM/kiln-shop/pull/2), [PR #4](https://github.com/SCARPxVeNOM/kiln-shop/pull/4). IT Tools fork [PR #1](https://github.com/SCARPxVeNOM/it-tools/pull/1), [PR #2](https://github.com/SCARPxVeNOM/it-tools/pull/2). Each shows the diff, Kane's before and after runs and its screenshots | Closed loop, Verified |
+| The coding agent fixes the product, and a fix counts only when Kane passes the same flow | kiln-shop [PR #6](https://github.com/SCARPxVeNOM/kiln-shop/pull/6), [PR #2](https://github.com/SCARPxVeNOM/kiln-shop/pull/2), [PR #4](https://github.com/SCARPxVeNOM/kiln-shop/pull/4). IT Tools fork [PR #1](https://github.com/SCARPxVeNOM/it-tools/pull/1), [PR #2](https://github.com/SCARPxVeNOM/it-tools/pull/2). Invoify fork [PR #1](https://github.com/SCARPxVeNOM/invoify/pull/1), [PR #2](https://github.com/SCARPxVeNOM/invoify/pull/2), [PR #3](https://github.com/SCARPxVeNOM/invoify/pull/3). Each shows the diff, Kane's before and after runs and its screenshots | Closed loop, Verified |
 | It runs unattended as a GitHub Action: label an issue, get a pull request | Actions runs [44766407916](https://github.com/SCARPxVeNOM/kiln-shop/actions/runs/44766407916) (failed), [44766857221](https://github.com/SCARPxVeNOM/kiln-shop/actions/runs/44766857221) (failed, inconclusive), [44783854641](https://github.com/SCARPxVeNOM/kiln-shop/actions/runs/44783854641) (succeeded). [PR #6](https://github.com/SCARPxVeNOM/kiln-shop/pull/6) is authored by `app/github-actions` | Ships |
 | The agent can't overrule Kane; only a human can, and Kane still has to watch the fix pass | [The dispute comment](https://github.com/SCARPxVeNOM/kiln-shop/issues/5#issuecomment-7044020173), the `gremlin:confirmed` label in the [issue #5 timeline](https://github.com/SCARPxVeNOM/kiln-shop/issues/5), "A human broke the tie" in [PR #6](https://github.com/SCARPxVeNOM/kiln-shop/pull/6), `confirmedBy` in [BUG-004.json](https://github.com/SCARPxVeNOM/kiln-shop/blob/d2aa250a93729d63a9b7eeae0196fd1ef150d1e4/.gremlin/bugs/BUG-004.json). Tests: [confirm.test.ts](../packages/gremlin/test/confirm.test.ts) | Verified |
-| It works on a real open-source app, not only the demo shop | [SCARPxVeNOM/it-tools](https://github.com/SCARPxVeNOM/it-tools), a fork of [IT Tools](https://github.com/CorentinTh/it-tools): fork PRs [#1](https://github.com/SCARPxVeNOM/it-tools/pull/1) and [#2](https://github.com/SCARPxVeNOM/it-tools/pull/2), and one finding a human rejected, with the reason, in [BUG-002.json](https://github.com/SCARPxVeNOM/it-tools/blob/f127a8c3bf4a3e702964b91fa48523fa3452a419/.gremlin/bugs/BUG-002.json) | Ships, Verified |
+| It works on real open-source apps, not only the demo shop | [SCARPxVeNOM/it-tools](https://github.com/SCARPxVeNOM/it-tools), a fork of [IT Tools](https://github.com/CorentinTh/it-tools): fork PRs [#1](https://github.com/SCARPxVeNOM/it-tools/pull/1) and [#2](https://github.com/SCARPxVeNOM/it-tools/pull/2), and one finding a human rejected, with the reason, in [BUG-002.json](https://github.com/SCARPxVeNOM/it-tools/blob/f127a8c3bf4a3e702964b91fa48523fa3452a419/.gremlin/bugs/BUG-002.json). [SCARPxVeNOM/invoify](https://github.com/SCARPxVeNOM/invoify), a fork of [Invoify](https://github.com/al1abb/invoify): fork PRs [#1](https://github.com/SCARPxVeNOM/invoify/pull/1), [#2](https://github.com/SCARPxVeNOM/invoify/pull/2) and [#3](https://github.com/SCARPxVeNOM/invoify/pull/3) | Ships, Verified |
 | Several agents race on one bug and Kane picks the smallest fix that passes | [PR #4](https://github.com/SCARPxVeNOM/kiln-shop/pull/4) and its [arena.md](https://github.com/SCARPxVeNOM/kiln-shop/blob/ecf9c9f19e96472fd462cdb84c8f5ea85a6c2e14/.gremlin/bugs/BUG-001/arena.md) | Closed loop |
 | A fixed bug that comes back stops the agent from finishing | [`docs/demo-run`](demo-run): the Stop hook's Guard runs in [events.jsonl](demo-run/.gremlin/events.jsonl) and [runs/](demo-run/.gremlin/runs) | Closed loop |
 | The Kiln session in the README is a real record, run by run | [`docs/demo-run/.gremlin`](demo-run/.gremlin): 43 Kane runs, 5 bugs, fix packages, Kane's screenshots, the [credit ledger](demo-run/.gremlin/ledger.jsonl) | Verified, Craft |
@@ -161,6 +161,57 @@ Nothing was posted to the upstream IT Tools repository. Both pull requests are o
 | --- | --- |
 | <img src="https://github.com/SCARPxVeNOM/it-tools/blob/f127a8c3bf4a3e702964b91fa48523fa3452a419/.gremlin/bugs/BUG-001/kane-before.jpg?raw=true" width="420" alt="Kane's screenshot of IT Tools JSON to CSV before the fix: the CSV output reads Alice,alice@example.test,[object Object]."> | <img src="https://github.com/SCARPxVeNOM/it-tools/blob/f127a8c3bf4a3e702964b91fa48523fa3452a419/.gremlin/bugs/BUG-001/kane-after.jpg?raw=true" width="420" alt="Kane's screenshot after the fix: the CSV output keeps the nested address as JSON containing Paris."> |
 
+## Invoify: a second open-source app
+
+[Invoify](https://github.com/al1abb/invoify) is a Next.js invoice generator (about 6,400 GitHub stars). Gremlin ran on
+a fork, [SCARPxVeNOM/invoify](https://github.com/SCARPxVeNOM/invoify), at upstream `master` 3859b3c, on 21 and 22
+November. It ran on a laptop, with Claude Code as the agent and the app on `next dev`. The Breaker sent Kane 9 attacks
+in two hunts:
+
+- 4 held: a percentage tax cleared and retyped, a double-clicked *Generate PDF*, an emoji and right-to-left name, and a
+  negative quantity.
+- 3 failed, and Kane judged each a product bug.
+- 2 failed, but Kane blamed the test, so Gremlin held them: a negative discount and a sender name of only spaces.
+
+We gave the negative discount a second chance as a plain-English report through `gremlin capture`, and it became
+BUG-004:
+
+| Bug | What Kane saw | Kane's confidence | Outcome |
+| --- | --- | --- | --- |
+| BUG-001 | A line total of 10,000,000,000,000,000 (rate 1,000,000,000 × quantity 10,000,000) replaces the Line Items form with a runtime error | 99% | Claude Code fixed it; Kane passed it. [Fork PR #2](https://github.com/SCARPxVeNOM/invoify/pull/2) |
+| BUG-002 | The same crash, from a second attack with a huge line total | 99% | Rejected by a human as a duplicate of BUG-001 |
+| BUG-003 | Bill To Email rejects `accounts-receivable@example.test`, a valid 32-character address | 95% | Claude Code fixed it; Kane passed it. [Fork PR #3](https://github.com/SCARPxVeNOM/invoify/pull/3) |
+| BUG-004 | A discount of −50 on a 200.00 USD subtotal makes the Total Amount 250.00 USD | 98% | Claude Code fixed it; Kane passed it. [Fork PR #1](https://github.com/SCARPxVeNOM/invoify/pull/1) |
+
+- **PR #1 (BUG-004)** never applies a negative discount in `contexts/ChargesContext.tsx` and rejects one in the schema
+  (`lib/schemas.ts`). Before: `RUN-20261121-170218-dcbf0b`. After: `RUN-20261121-170625-a8812c`, on the first attempt,
+  plus one related flow (the tax attack, replayed for 0 credits). 47.58 Kane credits.
+- **PR #2 (BUG-001)** spells out amounts beyond JavaScript's safe integer range a quadrillion at a time in
+  `lib/helpers.ts`, where `number-to-words` threw. Before: `RUN-20261121-162325-b889e8`. After:
+  `RUN-20261122-001932-def4aa`, on the first attempt that ran. 86.11 Kane credits.
+- **PR #3 (BUG-003)** raises the email cap in `lib/schemas.ts` from 30 characters to 254, the longest address SMTP
+  allows. Before: `RUN-20261121-164009-ad6076`. After: `RUN-20261122-004303-a4b647`, a `gremlin verify` run on exactly
+  the code in the pull request; [What didn't go to plan](#what-didnt-go-to-plan) says why. 162.31 Kane credits.
+- **BUG-002** is the same price-formatter crash. A human rejected it with the reason in its record: *"Duplicate of
+  BUG-001: the same crash in the price formatter when a line total exceeds JavaScript's safe integer range, reached the
+  same way (huge rate × quantity)."*
+
+How new these are: Invoify already has an open issue about the same crash, reached from the discount, tax and shipping
+fields ([#659](https://github.com/al1abb/invoify/issues/659)). It also has an open request to lift input character
+limits in general ([#692](https://github.com/al1abb/invoify/issues/692)), and BUG-003 is one concrete case of it. We
+found no report of BUG-004. A closed issue, [#22](https://github.com/al1abb/invoify/issues/22), fixed the opposite case:
+a discount pushing the total below zero.
+
+The session took 20 Kane runs and 800.02 credits: 571.21 for the two hunts, 91.32 for Capture, 109.80 for the Fixer
+and 27.69 for one `gremlin verify`. All three pull requests are on the fork. Upstream, BUG-004 and BUG-003 are
+reported as issues [#1102](https://github.com/al1abb/invoify/issues/1102) and
+[#1103](https://github.com/al1abb/invoify/issues/1103), each linking its fork pull request. No pull request has been
+opened there.
+
+| BUG-004 before the fix (`RUN-20261121-170218-dcbf0b`) | After the fix (`RUN-20261121-170625-a8812c`) |
+| --- | --- |
+| <img src="https://github.com/SCARPxVeNOM/invoify/blob/407d9525382fbb49c420368701d644751249e5a6/.gremlin/bugs/BUG-004/kane-before.jpg?raw=true" width="420" alt="Kane's screenshot of Invoify's Summary before the fix: Subtotal 200.00 USD, Discount -50, Total Amount 250.00 USD."> | <img src="https://github.com/SCARPxVeNOM/invoify/blob/407d9525382fbb49c420368701d644751249e5a6/.gremlin/bugs/BUG-004/kane-after.jpg?raw=true" width="420" alt="Kane's screenshot after the fix: the same -50 discount, and the Total Amount stays 200.00 USD."> |
+
 ## The agent arena: kiln-shop PR #4
 
 [Issue #3](https://github.com/SCARPxVeNOM/kiln-shop/issues/3) reports that searching for "100% stoneware" shows an
@@ -210,17 +261,18 @@ It is a record, not a working project: the shop's code isn't in it.
 
 ## Unit tests
 
-`npm test` runs the tests in [`packages/gremlin/test`](../packages/gremlin/test) with Node's test runner: 41 tests,
-all passing on 21 November 2026, in about 12 seconds. They use stand-ins for Kane, the agent and `gh`, so they cost no
+`npm test` runs the tests in [`packages/gremlin/test`](../packages/gremlin/test) with Node's test runner: 43 tests,
+all passing on 22 November 2026, in about 12 seconds. They use stand-ins for Kane, the agent and `gh`, so they cost no
 credits. The ones behind the claims on this page:
 
 | File | What it checks |
 | --- | --- |
 | [confirm.test.ts](../packages/gremlin/test/confirm.test.ts) | A human's `gremlin:confirmed` re-runs the exact disputed repro and files it only if Kane fails it at the same step; only Gremlin's own comment is read back; the pull request names who broke the tie |
-| [issues.test.ts](../packages/gremlin/test/issues.test.ts) | A proven fix becomes a pull request with Kane's before and after; uncommitted changes block the loop; a bug number held by an open branch is never reused |
+| [issues.test.ts](../packages/gremlin/test/issues.test.ts) | A proven fix becomes a pull request with Kane's before and after; uncommitted changes block the loop; a bug number held by an open branch is never reused; a fix that passed on a later attempt goes in whole, and one trimmed by hand goes in only as Kane verified it |
 | [arena.test.ts](../packages/gremlin/test/arena.test.ts) | Every agent gets the same bug, Kane judges each fix, and the smallest passing fix wins |
 | [lock.test.ts](../packages/gremlin/test/lock.test.ts) | Each flow is locked in its own file and an edit is still caught |
-| [guard.test.ts](../packages/gremlin/test/guard.test.ts) | A fix waiting in an open pull request isn't treated as a regression on main |
+| [guard.test.ts](../packages/gremlin/test/guard.test.ts) | A fix waiting in an open pull request isn't treated as a regression on main, and the Fixer doesn't hold it against the next fix |
+| [fixer.test.ts](../packages/gremlin/test/fixer.test.ts) | An agent that couldn't start (a usage limit, a sign-in) is told apart from one that failed at the fix |
 
 ## What didn't go to plan
 
@@ -239,9 +291,10 @@ credits. The ones behind the claims on this page:
   ended inconclusive, and the second one reproduced the bug.
 - **On IT Tools a human overruled Kane the other way.** Kane called BUG-002 a product bug with 98% confidence; the
   human rejected it as out of the tool's scope.
-- **No pull request has been merged.** kiln-shop PRs #2, #4 and #6 and fork PRs #1 and #2 are all open, and so are
+- **No pull request has been merged.** kiln-shop PRs #2, #4 and #6, IT Tools fork PRs #1 and #2 and Invoify fork PRs
+  #1 to #3 are all open, and so are
   issues #1, #3 and #5. "Merging closes the issue" hasn't been exercised on them yet.
-- **Only PR #6 came from CI.** kiln-shop PRs #2 and #4 and both fork PRs were opened from Gremlin running on a laptop,
+- **Only PR #6 came from CI.** kiln-shop PRs #2 and #4 and all five fork PRs were opened from Gremlin running on a laptop,
   under SCARPxVeNOM's account. The kiln-shop workflow was added at 12:27:24, after PRs #2 and #4; the fork has no
   Actions runs.
 - **Two PR descriptions were edited by hand after Gremlin opened them**, which GitHub shows as "edited". On PR #2,
@@ -260,6 +313,30 @@ credits. The ones behind the claims on this page:
   appear on GitHub.
 - **The issue #5 report was written by the repo owner**, in a shopper's voice. The bug itself was not planted: the
   Breaker found it in the recorded session on 18 November (see the README's [Honest limits](../README.md#honest-limits)).
+- **On Invoify, Claude Code's usage limit escalated a bug nobody had tried to fix.** The first `gremlin fix BUG-001`
+  hit Claude Code's session limit three times. Gremlin counted each one as a failed attempt and handed BUG-001 to a
+  human after "3 attempts" in which no code was written. Gremlin now tells an agent that couldn't start (a usage limit,
+  a sign-in, an overloaded API) from one that failed at the fix. It spends no attempt, leaves the bug as it was and says
+  to run `gremlin fix` again. After the limit reset, the retry fixed BUG-001 on its first attempt.
+- **BUG-003's first fix was right, and Gremlin sent it back.** Kane passed the email flow after Claude Code's first
+  change (`RUN-20261122-002131-b71010`). The Fixer then re-ran the related flows, and one was BUG-001's regression flow.
+  It failed (`RUN-20261122-002231-c99586`, 69.71 credits) only because BUG-001's fix was waiting in PR #2, not on
+  `master`. Claude Code's second attempt fixed the same crash again, a different way, in `lib/helpers.ts`, and Kane
+  passed both flows. A human removed that duplicate, Kane verified the email fix alone (`RUN-20261122-004303-a4b647`,
+  27.69 credits), and PR #3 carries only that. Its description says that a human changed Claude Code's passing fix.
+  Two changes to Gremlin came out of it:
+  - The Fixer now skips a related flow whose own fix is in an unmerged pull request, as Guard already did.
+  - `gremlin pr` opens the fix Kane last proved: every attempt's files, or, after `gremlin verify`, exactly what Kane
+    verified.
+- **The Breaker missed BUG-004 at first.** Its negative-discount attack failed, but Kane blamed the test (96%), so
+  Gremlin held it. Filed again as a plain-English report through `gremlin capture`, Kane blamed the test again (98%).
+  The agent revised the repro once, and Kane failed the revision and called it a product bug (98%).
+- **The first Invoify hunt stopped at its credit budget** after 3 attacks: 234.65 credits against a budget of 200 per
+  hunt. The budget was raised to 600 for the second hunt.
+- **Invoify PR #1's description was edited by hand twice.** Gremlin had named the report by its full path on the
+  laptop. That became its file name, `neg-discount.txt`, and Gremlin now names it that way itself. The changed-files
+  line listed `tsconfig.tsbuildinfo`, a git-ignored build file that isn't in the pull request. It was removed, and
+  Gremlin now lists the files the commit holds.
 - **Kane run IDs use the clock of the machine that ran Kane.** On GitHub's runner that is UTC
   (`RUN-20261120-173046-…` started at 17:30:46 UTC). On the laptop it is India time, UTC+5:30, so PR #4's
   `RUN-20261120-163633-e0044c` ran at 11:06:33 UTC.
