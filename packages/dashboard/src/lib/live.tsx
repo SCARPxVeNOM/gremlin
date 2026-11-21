@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react'
-import { api, type GEvent } from './api'
+import { api, SNAPSHOT, type GEvent } from './api'
 
 interface LiveState {
   events: GEvent[]
@@ -23,6 +23,7 @@ export function LiveProvider({ children }: { children: ReactNode }) {
     api<GEvent[]>('events?limit=400')
       .then(setEvents)
       .catch(() => {})
+    if (SNAPSHOT) return
     const connect = () => {
       if (stopped) return
       es = new EventSource('/api/stream')

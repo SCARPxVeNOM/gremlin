@@ -236,7 +236,17 @@ export interface CatalogEntry {
   found: number
 }
 
+/** Built with VITE_SNAPSHOT=1: a read-only copy of one recorded session, served as static files (scripts/snapshot.mjs). */
+export const SNAPSHOT = import.meta.env.VITE_SNAPSHOT === '1'
+export const snapshotFile = (path: string) => `${import.meta.env.BASE_URL}snapshot/${path.replace(/[^\w.-]/g, '_')}.json`
+
 export async function api<T>(path: string, init?: RequestInit): Promise<T> {
+  if (SNAPSHOT) {
+    if (init?.method && init.method !== 'GET') throw new Error('This is a read-only snapshot of a recorded session. To run Kane, install Gremlin: npm i -g gremlin-qa')
+    const res = await fetch(snapshotFile(path))
+    if (!res.ok) throw new Error('Not in this snapshot')
+    return (await res.json()) as T
+  }
   const res = await fetch(`/api/${path}`, {
     ...init,
     headers: { 'content-type': 'application/json', ...(init?.headers ?? {}) },
@@ -249,4 +259,5 @@ export async function api<T>(path: string, init?: RequestInit): Promise<T> {
 export const post = <T = { started: boolean }>(path: string, body: unknown = {}) =>
   api<T>(path, { method: 'POST', body: JSON.stringify(body) })
 
-export const evidenceUrl = (runId: string, file: string) => `/api/evidence/${runId}/${encodeURIComponent(file)}`
+export const evidenceUrl = (runId: string, file: string) =>
+  SNAPSHOT ? `${import.meta.env.BASE_URL}snapshot/evidence/${runId}/${encodeURIComponent(file)}` : `/api/evidence/${runId}/${encodeURIComponent(file)}`

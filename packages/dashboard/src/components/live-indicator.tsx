@@ -1,11 +1,20 @@
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { useJobEvents, useLive } from '@/lib/live'
+import { SNAPSHOT } from '@/lib/api'
 import { cn } from '@/lib/utils'
 
 /** Shows whether the dashboard is following the event stream, and what Gremlin is doing right now. */
 export function LiveIndicator() {
   const { connected } = useLive()
   const { job, running } = useJobEvents()
+  if (SNAPSHOT) {
+    return (
+      <span className="text-muted-foreground hidden h-8 items-center gap-2 rounded-md border px-2.5 text-xs sm:inline-flex">
+        <span className="bg-muted-foreground size-1.5 rounded-full" />
+        Recorded session
+      </span>
+    )
+  }
   const label = !connected ? 'Reconnecting' : running ? job?.msg ?? 'Working' : 'Idle'
   return (
     <Tooltip>

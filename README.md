@@ -14,9 +14,12 @@
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue" alt="MIT license"></a>
   <img src="https://img.shields.io/badge/node-%3E%3D20-339933" alt="Node 20 or later">
   <a href="https://github.com/SCARPxVeNOM/kiln-shop/pull/6"><img src="https://img.shields.io/badge/live%20run-issue%20%E2%86%92%20Kane--proven%20PR-6f42c1" alt="Live run: a GitHub issue became a pull request Kane proved"></a>
+  <a href="https://youtu.be/fk5jF-6zMa8"><img src="https://img.shields.io/badge/demo-4%20min%20video-ff0000?logo=youtube&logoColor=white" alt="Demo video on YouTube, 4 minutes"></a>
 </p>
 
 <p align="center">
+  <a href="https://youtu.be/fk5jF-6zMa8">Demo video</a> ·
+  <a href="https://scarpxvenom.github.io/gremlin/">Live dashboard</a> ·
   <a href="#see-it-working">See it working</a> ·
   <a href="#for-judges">For judges</a> ·
   <a href="#one-bug-end-to-end">One bug, end to end</a> ·
@@ -28,6 +31,13 @@
 
 <p align="center">
   <img src="docs/assets/red-to-green.png" width="900" alt="Kane CLI's screenshots of the same flow. Before the fix, checkout says 'That coupon code is not valid.' and the discount is $0.00. After Claude Code's fix, it says '10% welcome discount applied.' and the discount is -$2.80.">
+</p>
+
+<p align="center">
+  <a href="https://youtu.be/fk5jF-6zMa8"><strong>▶ Watch the 4-minute demo</strong></a>: a real complaint, Kane watching it fail, Claude Code's fix,
+  Kane watching it pass, and a GitHub issue that became a Kane-proven pull request with no human touching the code.<br>
+  Or <a href="https://scarpxvenom.github.io/gremlin/"><strong>open the dashboard live</strong></a>: a read-only copy of a recorded session, with all 43 Kane runs,
+  their screenshots, the bugs and Claude Code's fixes. Nothing to install.
 </p>
 
 ---
@@ -178,13 +188,26 @@ Gremlin compiles each flow to a Kane `_test.md` (one `## Step` per line, the exp
 
 ## For judges
 
+Where to see each bar and each scoring dimension, with the demo video's timestamp where it shows it:
+
+| | Where to see it |
+| --- | --- |
+| **Works end to end** | [Issue #5](https://github.com/SCARPxVeNOM/kiln-shop/issues/5) → [Action run](https://github.com/SCARPxVeNOM/kiln-shop/actions/runs/44783854641) → [PR #6](https://github.com/SCARPxVeNOM/kiln-shop/pull/6): a label in, a Kane-proven pull request out, no human touching the code ([video 2:08](https://youtu.be/fk5jF-6zMa8?t=128)) |
+| **Kane caught or proved something** | Kane watched the lowercase coupon fail and the fix pass ([video 0:41](https://youtu.be/fk5jF-6zMa8?t=41)); on [IT Tools](docs/proof.md#it-tools-a-real-open-source-app) (41k stars) it confirmed 3 product bugs, and proved fixes for the 2 a human agreed were bugs |
+| **The agent and Kane talk** | Kane's evidence pack is the agent's prompt; the Claude Code Stop hook blocked "done" twice with Kane's evidence when a fixed bug came back ([recorded session](docs/proof.md#the-recorded-session-docsdemo-run), [video 2:54](https://youtu.be/fk5jF-6zMa8?t=174)) |
+| **Ships** | `npm install -g gremlin-qa`, a [GitHub Action](#github-action), a local dashboard, connectors for Claude Code, Codex, Cursor and Gemini |
+| **Verified** | Every pass and fail is a Kane CLI run with an evidence pack; Kane's triage separates product bugs from faults in the test; all 43 runs of the [recorded session](docs/demo-run) are committed |
+| **Closed loop** | Evidence → agent → Kane re-runs the flow and its neighbours → locked → replayed on every "done" and PR. After N failed tries it goes to a human, and when Kane and the agent disagree, a human settles it on the issue ([how it closes](#how-the-loop-closes)) |
+| **Craft** | The agent [can't edit the tests](#an-agent-cant-cheat-its-way-to-green); recorded replays are free (25 of the session's 43 runs cost 0 credits); `gremlin doctor`; [honest limits](#honest-limits) |
+
 Four ways to check Gremlin, from nothing to install to a full loop. None of them needs our credentials: Kane runs on
 your own TestMu AI account, and the coding agent on your own login.
 
 1. **Read the evidence, no setup.** [`docs/proof.md`](docs/proof.md) links every claim to a public issue, Actions run,
    pull request or committed record, and has a 2-minute checklist.
-2. **Browse the recorded session, no Kane runs.** With `npm install -g gremlin-qa` and this repo cloned,
-   `cd docs/demo-run && gremlin dash` opens all 43 runs, the bugs, Claude Code's fix packages and Kane's screenshots.
+2. **Browse the recorded session, no Kane runs.** [Open it live](https://scarpxvenom.github.io/gremlin/), a read-only
+   copy, or with `npm install -g gremlin-qa` and this repo cloned, `cd docs/demo-run && gremlin dash` opens all 43 runs,
+   the bugs, Claude Code's fix packages and Kane's screenshots.
 3. **Run Kane, no coding agent.** In [`examples/kiln`](examples/kiln), `gremlin doctor` then `gremlin run --all`
    replays the shop's 3 happy flows from the Kane recordings committed with it. Gremlin starts the shop itself.
 4. **The full loop.** With Claude Code (or Codex, Cursor or Gemini) signed in, follow [Try it on Kiln](#try-it-on-kiln):
