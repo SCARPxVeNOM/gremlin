@@ -13,7 +13,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { Page, PageHeader, Empty, Code } from '@/components/page'
 import { Stability, StatusBadge, StatusIcon, TypeBadge } from '@/components/status'
 import { useQuery } from '@/lib/live'
-import { post, type FlowView } from '@/lib/api'
+import { post, SNAPSHOT, type FlowView } from '@/lib/api'
 import { timeAgo } from '@/lib/format'
 
 const TABS = ['all', 'happy', 'adversarial', 'regression', 'review'] as const
@@ -92,7 +92,7 @@ export default function Flows() {
                 <TableHead>Last run</TableHead>
                 <TableHead className="hidden lg:table-cell">Stability</TableHead>
                 <TableHead className="hidden text-right lg:table-cell">Runs</TableHead>
-                <TableHead className="w-10" />
+                {!SNAPSHOT && <TableHead className="w-10" />}
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -137,7 +137,7 @@ export default function Flows() {
                     <Stability value={f.stability} />
                   </TableCell>
                   <TableCell className="text-muted-foreground hidden text-right tabular-nums lg:table-cell">{f.runs}</TableCell>
-                  <TableCell>
+                  <TableCell className={SNAPSHOT ? 'hidden' : undefined}>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button variant="ghost" size="icon" className="size-8" aria-label={`Actions for ${f.title}`}>

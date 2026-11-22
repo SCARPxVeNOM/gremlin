@@ -9,7 +9,7 @@ import { Label } from '@/components/ui/label'
 import { Page, PageHeader, Code } from '@/components/page'
 import { LiveFeed } from '@/components/live-feed'
 import { useJobEvents, useQuery, useBusy } from '@/lib/live'
-import { post, type Summary } from '@/lib/api'
+import { post, SNAPSHOT, type Bug, type Summary } from '@/lib/api'
 
 const SAMPLE = `Subject: your discount code is broken??
 
@@ -33,6 +33,9 @@ export default function Capture() {
   const isCapture = (e: { kind: string; data?: Record<string, unknown> }) => e.kind === 'job-start' && e.data?.kind === 'capture'
   const { end } = useJobEvents(isCapture)
   const bugId = end?.data?.bugId as string | undefined
+  // a recording can't capture anything new: it shows the reports it captured
+  const { data: bugs } = useQuery<Bug[]>(SNAPSHOT ? 'bugs' : null)
+  const captured = (bugs ?? []).filter((b) => b.origin === 'capture' && b.report)
 
   const submit = async () => {
     setSending(true)
@@ -58,6 +61,28 @@ export default function Capture() {
         }
       />
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_24rem]">
+        {SNAPSHOT ? (
+          <div className="min-w-0 space-y-6">
+            {captured.map((b) => (
+              <Card key={b.id}>
+                <CardHeader>
+                  <CardTitle>The report behind {b.id}</CardTitle>
+                  <CardDescription>As Kane and the agent saw it: personal details were stripped first.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <blockquote className="text-muted-foreground border-l-2 pl-4 text-sm leading-relaxed whitespace-pre-line italic">{b.report!.text.trim()}</blockquote>
+                </CardContent>
+                <CardFooter>
+                  <Button asChild>
+                    <Link to={`/bugs/${b.id}`}>
+                      See what Kane did with it <ArrowRight />
+                    </Link>
+                  </Button>
+                </CardFooter>
+              </Card>
+            ))}
+          </div>
+        ) : (
         <div className="min-w-0 space-y-6">
           <Card>
             <CardHeader>
@@ -102,6 +127,7 @@ export default function Capture() {
             </CardContent>
           </Card>
         </div>
+        )}
 
         <Card className="h-fit">
           <CardHeader>

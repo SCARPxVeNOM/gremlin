@@ -7,13 +7,13 @@ import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { Page, PageHeader, Code } from '@/components/page'
+import { Page, PageHeader, Code, LiveOnly } from '@/components/page'
 import { FlowDoc } from '@/components/flow-doc'
 import { LiveFeed } from '@/components/live-feed'
 import { ConsoleNetwork, KaneVerdictCard, StepTimeline } from '@/components/evidence'
 import { Confidence, SeverityBadge, StatusBadge, StatusIcon } from '@/components/status'
 import { useQuery } from '@/lib/live'
-import { post, type ArenaEntry, type Bug, type FlowView, type Run } from '@/lib/api'
+import { post, SNAPSHOT, type ArenaEntry, type Bug, type FlowView, type Run } from '@/lib/api'
 import { credits, duration, timeAgo } from '@/lib/format'
 import { cn } from '@/lib/utils'
 import NotFound from './not-found'
@@ -241,7 +241,7 @@ export default function BugDetail() {
       <PageHeader
         title={bug.title}
         actions={
-          <>
+          <LiveOnly>
             {bug.status !== 'rejected' && bug.status !== 'fixed' && (
               <Button variant="ghost" onClick={() => act('reject', `${bug.id} rejected`)}>
                 <Ban /> Not a bug
@@ -255,7 +255,7 @@ export default function BugDetail() {
                 <Wrench /> Fix with agent
               </Button>
             )}
-          </>
+          </LiveOnly>
         }
       >
         <div className="flex flex-wrap items-center gap-3 pt-1 text-sm">
@@ -365,7 +365,15 @@ export default function BugDetail() {
                 </ol>
               ) : (
                 <p className="text-muted-foreground text-sm">
-                  No attempts yet. <strong>Fix with agent</strong> hands the evidence to your coding agent, or run <Code>gremlin fix {bug.id}</Code>.
+                  {SNAPSHOT ? (
+                    <>
+                      Nobody tried to fix this in the recording. <Code>gremlin fix {bug.id}</Code> would hand Kane's evidence to a coding agent.
+                    </>
+                  ) : (
+                    <>
+                      No attempts yet. <strong>Fix with agent</strong> hands the evidence to your coding agent, or run <Code>gremlin fix {bug.id}</Code>.
+                    </>
+                  )}
                 </p>
               )}
             </CardContent>
@@ -375,15 +383,17 @@ export default function BugDetail() {
         </div>
 
         <div className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Live</CardTitle>
-              <CardDescription>The latest Gremlin job for {bug.id}.</CardDescription>
-            </CardHeader>
-            <CardContent className="max-h-[32rem] overflow-auto">
-              <LiveFeed filter={(e) => e.data?.bugId === bug.id || (e.kind === 'job-start' && e.msg.includes(bug.id))} empty="Nothing running for this bug." />
-            </CardContent>
-          </Card>
+          <LiveOnly>
+            <Card>
+              <CardHeader>
+                <CardTitle>Live</CardTitle>
+                <CardDescription>The latest Gremlin job for {bug.id}.</CardDescription>
+              </CardHeader>
+              <CardContent className="max-h-[32rem] overflow-auto">
+                <LiveFeed filter={(e) => e.data?.bugId === bug.id || (e.kind === 'job-start' && e.msg.includes(bug.id))} empty="Nothing running for this bug." />
+              </CardContent>
+            </Card>
+          </LiveOnly>
           {evidenceRun && <KaneVerdictCard run={evidenceRun} />}
           {flow && (
             <Card>

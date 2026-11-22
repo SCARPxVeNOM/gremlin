@@ -9,6 +9,8 @@ import { ThemeToggle } from '@/components/theme-toggle'
 import { LiveIndicator } from '@/components/live-indicator'
 import { Page } from '@/components/page'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Button } from '@/components/ui/button'
+import { ArrowUpRight } from 'lucide-react'
 import { SNAPSHOT } from '@/lib/api'
 
 const RELOADED = 'gremlin:reloaded-for-chunk'
@@ -37,6 +39,7 @@ function page(load: () => Promise<{ default: React.ComponentType<any> }>) {
   )
 }
 
+const Tour = page(() => import('@/pages/tour'))
 const Overview = page(() => import('@/pages/overview'))
 const Flows = page(() => import('@/pages/flows'))
 const FlowDetail = page(() => import('@/pages/flow-detail'))
@@ -60,6 +63,7 @@ function Loading() {
 }
 
 const LABELS: Record<string, string> = {
+  overview: 'Overview',
   flows: 'Flows',
   bugs: 'Bugs',
   runs: 'Runs',
@@ -77,7 +81,7 @@ function Crumbs() {
       <Breadcrumb>
         <BreadcrumbList>
           <BreadcrumbItem>
-            <BreadcrumbPage>Overview</BreadcrumbPage>
+            <BreadcrumbPage>{SNAPSHOT ? 'Start here' : 'Overview'}</BreadcrumbPage>
           </BreadcrumbItem>
         </BreadcrumbList>
       </Breadcrumb>
@@ -115,20 +119,18 @@ export default function App() {
     <SidebarProvider>
       <AppSidebar />
       <SidebarInset>
-        {SNAPSHOT && (
-          <div className="text-muted-foreground border-b px-4 py-2 text-xs">
-            Gremlin's dashboard over a recorded session on the Kiln demo shop (18 Nov 2026): 43 real Kane CLI runs with their screenshots, the bugs, and Claude Code's
-            fixes. Read-only, so the buttons that start Kane are off.{' '}
-            <a className="text-foreground underline underline-offset-2" href="https://github.com/SCARPxVeNOM/gremlin">
-              Run it yourself
-            </a>
-          </div>
-        )}
         <header className="bg-background/80 sticky top-0 z-20 flex h-14 shrink-0 items-center gap-2 border-b px-4 backdrop-blur">
           <SidebarTrigger className="-ml-1" />
           <Separator orientation="vertical" className="mr-2 data-[orientation=vertical]:h-4" />
           <Crumbs />
-          <div className="ml-auto flex items-center gap-2">
+          <div className="ml-auto flex shrink-0 items-center gap-2">
+            {SNAPSHOT && (
+              <Button variant="ghost" size="sm" className="hidden md:inline-flex" asChild>
+                <a href="https://github.com/SCARPxVeNOM/gremlin" target="_blank" rel="noreferrer">
+                  Source <ArrowUpRight className="text-muted-foreground" />
+                </a>
+              </Button>
+            )}
             <LiveIndicator />
             <CommandMenu />
             <ThemeToggle />
@@ -136,7 +138,8 @@ export default function App() {
         </header>
         <Suspense fallback={<Loading />}>
           <Routes>
-            <Route path="/" element={<Overview />} />
+            <Route path="/" element={SNAPSHOT ? <Tour /> : <Overview />} />
+            <Route path="/overview" element={<Overview />} />
             <Route path="/flows" element={<Flows />} />
             <Route path="/flows/:type/:slug" element={<FlowDetail />} />
             <Route path="/bugs" element={<Bugs />} />

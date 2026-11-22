@@ -1,5 +1,9 @@
+import { SNAPSHOT } from './api'
+
 export function timeAgo(iso?: string): string {
   if (!iso) return '–'
+  // a recording has no "now": "3d ago" would keep growing, so it says when
+  if (SNAPSHOT) return `${new Date(iso).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: 'UTC' })} UTC`
   const s = Math.round((Date.now() - new Date(iso).getTime()) / 1000)
   if (s < 5) return 'just now'
   if (s < 60) return `${s}s ago`

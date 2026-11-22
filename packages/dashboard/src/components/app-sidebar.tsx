@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom'
-import { Bug, ClipboardPaste, FileText, Gauge, History, Route, Settings, ShieldCheck, Swords } from 'lucide-react'
+import { Bug, ClipboardPaste, Compass, FileText, Gauge, History, Route, Settings, ShieldCheck, Swords } from 'lucide-react'
 import {
   Sidebar,
   SidebarContent,
@@ -16,13 +16,15 @@ import {
 } from '@/components/ui/sidebar'
 import { Logo } from './logo'
 import { useQuery } from '@/lib/live'
-import type { Summary } from '@/lib/api'
+import { SNAPSHOT, type Summary } from '@/lib/api'
 
+// a recording opens on its story, and the dashboard's own front page moves to /overview
 const nav = [
+  ...(SNAPSHOT ? [{ label: 'Recorded session', items: [{ to: '/', label: 'Start here', icon: Compass }] }] : []),
   {
     label: 'Library',
     items: [
-      { to: '/', label: 'Overview', icon: Gauge },
+      { to: SNAPSHOT ? '/overview' : '/', label: 'Overview', icon: Gauge },
       { to: '/flows', label: 'Flows', icon: Route },
       { to: '/bugs', label: 'Bugs', icon: Bug, badge: 'open' as const },
       { to: '/runs', label: 'Runs', icon: History },
@@ -55,7 +57,7 @@ export function AppSidebar() {
                 </div>
                 <div className="grid flex-1 text-left text-sm leading-tight">
                   <span className="truncate font-semibold">Gremlin</span>
-                  <span className="text-muted-foreground truncate text-xs">{data?.app.name ?? 'QA that never sleeps'}</span>
+                  <span className="text-muted-foreground truncate text-xs">{SNAPSHOT ? `Recorded on ${data?.app.name ?? 'Kiln'}` : (data?.app.name ?? 'QA that never sleeps')}</span>
                 </div>
               </Link>
             </SidebarMenuButton>

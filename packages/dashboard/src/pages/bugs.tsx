@@ -7,7 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Page, PageHeader, Empty, Code } from '@/components/page'
 import { Confidence, SeverityBadge, StatusBadge } from '@/components/status'
 import { useQuery } from '@/lib/live'
-import type { Bug } from '@/lib/api'
+import { SNAPSHOT, type Bug } from '@/lib/api'
 import { credits, timeAgo } from '@/lib/format'
 
 const OPEN = ['candidate', 'confirmed', 'fixing', 'escalated']
@@ -15,7 +15,7 @@ const ORIGIN: Record<string, string> = { breaker: 'Breaker', capture: 'Report', 
 
 export default function Bugs() {
   const { data: bugs, loading } = useQuery<Bug[]>('bugs')
-  const [tab, setTab] = useState<'open' | 'fixed' | 'all'>('open')
+  const [tab, setTab] = useState<'open' | 'fixed' | 'all'>(SNAPSHOT ? 'all' : 'open')
   const all = bugs ?? []
   const shown = all.filter((b) => (tab === 'open' ? OPEN.includes(b.status) : tab === 'fixed' ? b.status === 'fixed' : true))
 

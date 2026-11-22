@@ -2,7 +2,7 @@
 //   VITE_SNAPSHOT=1 npx vite build && node scripts/snapshot.mjs [--from http://127.0.0.1:4777]
 // It keeps every page's data and Kane's evidence. It drops the Kane account name and credit balance, and strips this
 // machine's paths.
-import { cpSync, mkdirSync, writeFileSync } from 'node:fs'
+import { cpSync, existsSync, mkdirSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { parseArgs } from 'node:util'
 
@@ -33,4 +33,6 @@ for (const path of ['summary', 'runs?limit=8', 'report', 'catalog', 'events?limi
 for (const kind of ['flows', 'bugs', 'runs']) for (const { id } of lists[kind]) save(`${kind}/${id}`, await get(`${kind}/${id}`))
 
 cpSync(join(root, '.gremlin', 'evidence'), join(dir, 'evidence'), { recursive: true })
+// the story the snapshot opens on, kept next to the record it tells
+if (existsSync(join(root, 'tour.json'))) cpSync(join(root, 'tour.json'), join(dir, 'tour.json'))
 console.log(`${a.out}: ${lists.flows.length} flows, ${lists.bugs.length} bugs, ${lists.runs.length} runs, from ${root}`)

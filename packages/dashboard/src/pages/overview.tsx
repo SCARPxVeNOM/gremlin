@@ -9,11 +9,11 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { ChartContainer, ChartLegend, ChartLegendContent, ChartTooltip, ChartTooltipContent, type ChartConfig } from '@/components/ui/chart'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
-import { Page, PageHeader, Code } from '@/components/page'
+import { Page, PageHeader, Code, LiveOnly } from '@/components/page'
 import { LiveFeed } from '@/components/live-feed'
 import { SeverityBadge, StatusBadge, StatusIcon } from '@/components/status'
 import { useQuery, useBusy } from '@/lib/live'
-import { post, type Bug as BugT, type RunLite, type Summary } from '@/lib/api'
+import { post, SNAPSHOT, type Bug as BugT, type RunLite, type Summary } from '@/lib/api'
 import { credits, duration, purposeLabel, timeAgo } from '@/lib/format'
 
 const chartConfig = {
@@ -46,7 +46,7 @@ function FoundFixedChart({ data }: { data: Summary['timeline'] }) {
     <Card className="lg:col-span-2">
       <CardHeader>
         <CardTitle>Bugs found and fixed</CardTitle>
-        <CardDescription>Last 14 days. Fixed means Kane re-ran the flow and it passed.</CardDescription>
+        <CardDescription>{SNAPSHOT ? 'By day, up to when this record was made.' : 'Last 14 days.'} Fixed means Kane re-ran the flow and it passed.</CardDescription>
         <CardAction>
           <ToggleGroup type="single" size="sm" variant="outline" value={view} onValueChange={(v) => v && setView(v as 'chart' | 'table')}>
             <ToggleGroupItem value="chart">Chart</ToggleGroupItem>
@@ -119,7 +119,12 @@ export default function Overview() {
       <PageHeader
         title={s?.app.name ?? 'Overview'}
         description={
-          s ? (
+          s && SNAPSHOT ? (
+            <>
+              Gremlin guarded {s.app.name}, a demo shop, with {s.counts.flows.happy + s.counts.flows.adversarial + s.counts.flows.regression} flows. Every verdict came from Kane
+              CLI driving a real browser.
+            </>
+          ) : s ? (
             <>
               Gremlin is guarding <Code>{s.app.url}</Code> with {s.counts.flows.happy + s.counts.flows.adversarial + s.counts.flows.regression} flows. Every verdict comes from
               Kane CLI driving a real browser.
@@ -129,14 +134,14 @@ export default function Overview() {
           )
         }
         actions={
-          <>
+          <LiveOnly>
             <Button variant="outline" onClick={() => start('guard', 'Guard is replaying every active flow')} disabled={busy}>
               <ShieldCheck /> Run Guard
             </Button>
             <Button onClick={() => start('break', 'Breaker hunt started')} disabled={busy}>
               <Swords /> Hunt for bugs
             </Button>
-          </>
+          </LiveOnly>
         }
       />
 
@@ -153,10 +158,10 @@ export default function Overview() {
             <Stat title="Fixed and proven" icon={Wrench} value={s.counts.bugsFixed} to="/bugs" hint={`${s.counts.open} open · ${s.counts.escalated} escalated to a human`} />
             <Stat title="Regressions caught" icon={ShieldCheck} value={s.counts.regressionsCaught} to="/runs" hint={`${s.counts.flaky} flaky runs · ${s.counts.quarantined} quarantined flows`} />
             <Stat
-              title="Kane credits this week"
+              title={SNAPSHOT ? 'Kane credits' : 'Kane credits this week'}
               icon={Coins}
               value={credits(s.credits.week)}
-              hint={`${credits(s.credits.today)} today of ${s.credits.budget.per_day} · ${credits(s.credits.perBugFound)} per bug found`}
+              hint={SNAPSHOT ? `${credits(s.credits.perBugFound)} per bug found` : `${credits(s.credits.today)} today of ${s.credits.budget.per_day} · ${credits(s.credits.perBugFound)} per bug found`}
             />
           </>
         ) : (
@@ -168,8 +173,8 @@ export default function Overview() {
         {s ? <FoundFixedChart data={s.timeline} /> : <Skeleton className="h-80 rounded-xl lg:col-span-2" />}
         <Card className="lg:row-span-2">
           <CardHeader>
-            <CardTitle>Live loop</CardTitle>
-            <CardDescription>Whatever Gremlin is doing, from the CLI, a hook, MCP or this page.</CardDescription>
+            <CardTitle>{SNAPSHOT ? 'Session log' : 'Live loop'}</CardTitle>
+            <CardDescription>{SNAPSHOT ? 'The last job in the record, as Gremlin logged it.' : 'Whatever Gremlin is doing, from the CLI, a hook, MCP or this page.'}</CardDescription>
           </CardHeader>
           <CardContent className="max-h-[42rem] overflow-auto">
             <LiveFeed />

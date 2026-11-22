@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Bug, ClipboardPaste, FileText, Gauge, History, Route, Search, Settings, ShieldCheck, Swords } from 'lucide-react'
+import { Bug, ClipboardPaste, Compass, FileText, Gauge, History, Route, Search, Settings, ShieldCheck, Swords } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { CommandDialog, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList, CommandSeparator } from '@/components/ui/command'
 import { useQuery } from '@/lib/live'
-import { post, type Bug as BugT, type FlowView } from '@/lib/api'
+import { post, SNAPSHOT, type Bug as BugT, type FlowView } from '@/lib/api'
 import { StatusIcon } from './status'
 import { Kbd } from './page'
 
@@ -44,13 +44,13 @@ export function CommandMenu() {
     <>
       <Button
         variant="outline"
-        className="bg-muted/50 text-muted-foreground relative h-8 w-full justify-start rounded-md pr-12 pl-2.5 text-sm font-normal shadow-none sm:w-48 lg:w-60"
+        className="bg-muted/50 text-muted-foreground relative h-8 w-auto justify-start rounded-md pr-2.5 pl-2.5 text-sm font-normal shadow-none sm:w-48 sm:pr-12 lg:w-60"
         onClick={() => setOpen(true)}
       >
         <Search className="size-3.5" />
         <span className="hidden lg:inline-flex">Search flows and bugs…</span>
         <span className="inline-flex lg:hidden">Search…</span>
-        <span className="absolute top-1/2 right-1.5 -translate-y-1/2">
+        <span className="absolute top-1/2 right-1.5 hidden -translate-y-1/2 sm:block">
           <Kbd>⌘K</Kbd>
         </span>
       </Button>
@@ -60,7 +60,8 @@ export function CommandMenu() {
           <CommandEmpty>No results found.</CommandEmpty>
           <CommandGroup heading="Go to">
             {[
-              { to: '/', label: 'Overview', icon: Gauge },
+              ...(SNAPSHOT ? [{ to: '/', label: 'Start here', icon: Compass }] : []),
+              { to: SNAPSHOT ? '/overview' : '/', label: 'Overview', icon: Gauge },
               { to: '/flows', label: 'Flows', icon: Route },
               { to: '/bugs', label: 'Bugs', icon: Bug },
               { to: '/runs', label: 'Runs', icon: History },
@@ -75,8 +76,8 @@ export function CommandMenu() {
               </CommandItem>
             ))}
           </CommandGroup>
-          <CommandSeparator />
-          <CommandGroup heading="Actions">
+          {!SNAPSHOT && <CommandSeparator />}
+          {!SNAPSHOT && <CommandGroup heading="Actions">
             <CommandItem onSelect={() => act('guard', 'Guard is replaying every active flow')}>
               <ShieldCheck />
               Run Guard on all active flows
@@ -89,7 +90,7 @@ export function CommandMenu() {
               <ClipboardPaste />
               Capture a bug report
             </CommandItem>
-          </CommandGroup>
+          </CommandGroup>}
           {bugs && bugs.length > 0 && (
             <>
               <CommandSeparator />

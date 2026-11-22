@@ -6,7 +6,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { Page, PageHeader, Code } from '@/components/page'
+import { Page, PageHeader, Code, LiveOnly } from '@/components/page'
 import { FlowDoc } from '@/components/flow-doc'
 import { Stability, StatusBadge, TypeBadge } from '@/components/status'
 import { useQuery } from '@/lib/live'
@@ -54,7 +54,7 @@ export default function FlowDetail() {
       <PageHeader
         title={flow.title}
         actions={
-          <>
+          <LiveOnly>
             {flow.status !== 'retired' && (
               <Button variant="ghost" onClick={() => flowAction(flow.id, 'retire', refetch)}>
                 <Archive /> Retire
@@ -68,7 +68,7 @@ export default function FlowDetail() {
             <Button onClick={() => flowAction(flow.id, 'run', refetch)}>
               <Play /> Run with Kane
             </Button>
-          </>
+          </LiveOnly>
         }
       >
         <div className="flex flex-wrap items-center gap-2 pt-1">

@@ -1,0 +1,174 @@
+{
+  "title": "Gremlin on the Kiln shop: one recorded session",
+  "lede": "On 18 November 2026, Gremlin hunted for bugs in Kiln, a small demo shop, turned a customer's complaint into a test, had Claude Code fix two bugs, and caught one of those fixes being undone. Kane CLI ran every check in a real browser. This is the record, read-only: open any run to see Kane's steps and screenshots.",
+  "summary": "43 Kane runs in 73 minutes, from 10:59 to 12:12 UTC. 25 of them cost no credits. 661 credits in all.",
+  "stops": [
+    {
+      "at": "2026-11-18T10:59:58.000Z",
+      "title": "Kane replays the shop's three main journeys",
+      "body": "Gremlin starts by replaying flows Kane recorded earlier: buying a mug, the welcome coupon, and search. All three pass. Replaying recorded steps costs next to nothing: 5.66 credits for the three.",
+      "verdict": "pass",
+      "links": [
+        {
+          "label": "Kane's run: buying a mug",
+          "to": "/runs/RUN-20261118-162958-70cef1"
+        }
+      ]
+    },
+    {
+      "at": "2026-11-18T11:02:40.000Z",
+      "title": "The Breaker attacks the shop",
+      "body": "Claude Code read the shop's server code and proposed 5 attacks, and Gremlin's catalog added 3. Kane ran each one in a browser and judged every failure. Four were product bugs: checkout fails for a shopper named Łucja, the cart accepts −3 mugs, searching for \"100% stoneware\" shows an error page, and the search heading renders typed HTML. Two more attacks hit bugs already found. One failed, but Kane blamed the test, so Gremlin held it back instead of filing it. One passed.",
+      "verdict": "fail",
+      "links": [
+        {
+          "label": "BUG-001",
+          "to": "/bugs/BUG-001"
+        },
+        {
+          "label": "BUG-002",
+          "to": "/bugs/BUG-002"
+        },
+        {
+          "label": "BUG-003",
+          "to": "/bugs/BUG-003"
+        },
+        {
+          "label": "BUG-004",
+          "to": "/bugs/BUG-004"
+        }
+      ],
+      "shot": {
+        "run": "RUN-20261118-164132-5f61a3",
+        "file": "step-6-2-2.jpg",
+        "crop": [
+          0.27,
+          0.08,
+          0.36,
+          0.2
+        ],
+        "alt": "Kane's screenshot of Kiln after searching for 100% stoneware: a page that says Something went wrong.",
+        "caption": "BUG-003: what Kane saw after searching for \"100% stoneware\"."
+      }
+    },
+    {
+      "at": "2026-11-18T11:37:00.000Z",
+      "title": "A customer's complaint becomes a test",
+      "body": "A support email from Priya said the code welcome10 was rejected at checkout. Gremlin stripped her email address and phone number, Claude Code turned the complaint into test steps, and Kane ran them. The coupon was refused, on the first run and on the retry, so it became BUG-005.",
+      "verdict": "fail",
+      "links": [
+        {
+          "label": "BUG-005",
+          "to": "/bugs/BUG-005"
+        },
+        {
+          "label": "Kane's failing run",
+          "to": "/runs/RUN-20261118-170700-80b75b"
+        }
+      ],
+      "shot": {
+        "run": "RUN-20261118-170700-80b75b",
+        "file": "step-11-3-2.jpg",
+        "crop": [
+          0.19,
+          0.52,
+          0.35,
+          0.29
+        ],
+        "alt": "Kane's screenshot of Kiln's checkout: welcome10 typed in the coupon box and the message That coupon code is not valid.",
+        "caption": "Before the fix: \"That coupon code is not valid.\""
+      }
+    },
+    {
+      "at": "2026-11-18T11:40:45.000Z",
+      "title": "Claude Code fixes it, and Kane checks the fix",
+      "body": "Gremlin handed Claude Code Kane's evidence: the failing step, the screenshots and Kane's triage. It fixed the coupon lookup in server.js, and also edited README.md unasked, which Gremlin flagged for review. Kane re-ran the complaint's steps, which now passed, and two related journeys, which still passed. The test was then locked, so no agent can weaken it later.",
+      "verdict": "pass",
+      "links": [
+        {
+          "label": "BUG-005",
+          "to": "/bugs/BUG-005"
+        },
+        {
+          "label": "Kane's passing run",
+          "to": "/runs/RUN-20261118-171532-74d7a4"
+        }
+      ],
+      "shot": {
+        "run": "RUN-20261118-171532-74d7a4",
+        "file": "step-11-3-4.jpg",
+        "crop": [
+          0.19,
+          0.52,
+          0.35,
+          0.29
+        ],
+        "alt": "Kane's screenshot of Kiln's checkout after the fix: 10% welcome discount applied, a discount of 2.80 dollars and a total of 31.20 dollars.",
+        "caption": "After the fix: the 10% discount is applied."
+      }
+    },
+    {
+      "at": "2026-11-18T11:48:16.000Z",
+      "title": "The fix is undone, and Kane catches it",
+      "body": "We undid the coupon fix by hand, then asked a real Claude Code session for an unrelated accessibility change. When it said it was done, its Stop hook had Kane replay the affected flows. The coupon flow failed, so \"done\" was refused and Kane's evidence became Claude's next prompt. That happened twice. Then Claude restored the fix, and all five flows passed.",
+      "verdict": "fail",
+      "links": [
+        {
+          "label": "The first catch",
+          "to": "/runs/RUN-20261118-172106-e2064a"
+        },
+        {
+          "label": "The second",
+          "to": "/runs/RUN-20261118-172728-378089"
+        },
+        {
+          "label": "The pass after the fix was restored",
+          "to": "/runs/RUN-20261118-173221-01dddd"
+        }
+      ],
+      "shot": {
+        "run": "RUN-20261118-172106-e2064a",
+        "file": "step-9-3-2.jpg",
+        "crop": [
+          0.19,
+          0.52,
+          0.35,
+          0.29
+        ],
+        "alt": "Kane's screenshot of Kiln's checkout during the replay: welcome10 rejected again with That coupon code is not valid.",
+        "caption": "The replay that stopped Claude Code: the coupon is refused again."
+      }
+    },
+    {
+      "at": "2026-11-18T12:07:32.000Z",
+      "title": "BUG-002 is fixed too",
+      "body": "Claude Code made the cart refuse negative quantities. Kane passed both flows that had reproduced the bug, plus two related journeys.",
+      "verdict": "pass",
+      "links": [
+        {
+          "label": "BUG-002",
+          "to": "/bugs/BUG-002"
+        },
+        {
+          "label": "Kane's passing run",
+          "to": "/runs/RUN-20261118-173732-de633e"
+        }
+      ]
+    }
+  ],
+  "ending": "Where it ended: BUG-002 and BUG-005 are fixed, and Kane has watched both fixes work. BUG-001, BUG-003 and BUG-004 are still open. Gremlin found them, and nobody has fixed them yet.",
+  "links": [
+    {
+      "label": "Source code on GitHub",
+      "href": "https://github.com/SCARPxVeNOM/gremlin"
+    },
+    {
+      "label": "Watch the 4-minute demo",
+      "href": "https://youtu.be/fk5jF-6zMa8"
+    },
+    {
+      "label": "Evidence for every claim",
+      "href": "https://github.com/SCARPxVeNOM/gremlin/blob/main/docs/proof.md"
+    }
+  ]
+}

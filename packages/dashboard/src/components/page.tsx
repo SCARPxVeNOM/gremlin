@@ -1,5 +1,11 @@
 import type { ReactNode } from 'react'
 import { cn } from '@/lib/utils'
+import { SNAPSHOT } from '@/lib/api'
+
+/** Controls that start Kane or change the record: a recorded session has nothing to start them on. */
+export function LiveOnly({ children }: { children: ReactNode }) {
+  return SNAPSHOT ? null : <>{children}</>
+}
 
 export function PageHeader({ title, description, actions, children }: { title: ReactNode; description?: ReactNode; actions?: ReactNode; children?: ReactNode }) {
   return (

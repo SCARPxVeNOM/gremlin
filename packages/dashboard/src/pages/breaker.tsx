@@ -8,10 +8,12 @@ import { Label } from '@/components/ui/label'
 import { Slider } from '@/components/ui/slider'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { Link } from 'react-router-dom'
 import { Page, PageHeader } from '@/components/page'
+import { SeverityBadge, StatusBadge } from '@/components/status'
 import { LiveFeed } from '@/components/live-feed'
 import { useQuery, useBusy } from '@/lib/live'
-import { post, type CatalogEntry, type ConfigView, type Summary } from '@/lib/api'
+import { post, SNAPSHOT, type Bug, type CatalogEntry, type ConfigView, type Summary } from '@/lib/api'
 
 /** Same estimate the Breaker uses to rank attacks: the prior, updated by what this product has shown so far. */
 const learned = (a: CatalogEntry) => (a.found + a.prior * 2) / (a.tried + 2)
@@ -21,6 +23,9 @@ export default function Breaker() {
   const { data: s } = useQuery<Summary>('summary')
   const busy = useBusy() || !!s?.busy
   const { data: config } = useQuery<ConfigView>('config')
+  // a recording can't start a hunt: it shows what its hunt found instead
+  const { data: bugs } = useQuery<Bug[]>(SNAPSHOT ? 'bugs' : null)
+  const found = (bugs ?? []).filter((b) => b.origin === 'breaker')
   const categories = useMemo(() => {
     const m = new Map<string, string>()
     for (const a of catalog ?? []) m.set(a.category, a.categoryLabel)
@@ -46,7 +51,29 @@ export default function Breaker() {
         title="Breaker"
         description="Sends Kane to do what real users do: paste emoji, double-click Pay, hit Back mid-checkout. Only failures Kane judges to be product bugs are filed."
       />
-      <div className="grid gap-6 lg:grid-cols-[22rem_minmax(0,1fr)]">
+      <div className={SNAPSHOT ? 'space-y-6' : 'grid gap-6 lg:grid-cols-[22rem_minmax(0,1fr)]'}>
+        {SNAPSHOT ? (
+          <Card>
+            <CardHeader>
+              <CardTitle>What the hunt found</CardTitle>
+              <CardDescription>The bugs this session's hunt filed. Each one failed in Kane's browser, and Kane judged it a product bug.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ul className="divide-y">
+                {found.map((b) => (
+                  <li key={b.id}>
+                    <Link to={`/bugs/${b.id}`} className="hover:bg-muted/40 -mx-2 flex flex-wrap items-center gap-x-3 gap-y-1 rounded-md px-2 py-3">
+                      <span className="text-muted-foreground w-16 shrink-0 font-mono text-xs">{b.id}</span>
+                      <span className="min-w-0 flex-1 text-sm font-medium">{b.title}</span>
+                      <SeverityBadge severity={b.severity} />
+                      <StatusBadge status={b.status} />
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </CardContent>
+          </Card>
+        ) : (
         <Card className="h-fit">
           <CardHeader>
             <CardTitle>New hunt</CardTitle>
@@ -95,16 +122,19 @@ export default function Breaker() {
             </Button>
           </CardFooter>
         </Card>
+        )}
 
         <div className="min-w-0 space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Hunt</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <LiveFeed filter={(e) => e.kind === 'job-start' && e.data?.kind === 'break'} empty="No hunts yet." limit={80} />
-            </CardContent>
-          </Card>
+          {!SNAPSHOT && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Hunt</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <LiveFeed filter={(e) => e.kind === 'job-start' && e.data?.kind === 'break'} empty="No hunts yet." limit={80} />
+              </CardContent>
+            </Card>
+          )}
           <Card>
             <CardHeader>
               <CardTitle>Attack catalog</CardTitle>
